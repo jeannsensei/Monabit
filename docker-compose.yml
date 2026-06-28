@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./api/.env
+    environment:
+      - NODE_ENV=development
+      - PORT=8080
+    volumes:
+      - ./api/src:/app/src
+    command: npm run dev
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      target: builder
+    ports:
+      - "5173:5173"
+    env_file:
+      - ./web/.env
+    volumes:
+      - ./web/src:/app/src
+    command: npm run dev
