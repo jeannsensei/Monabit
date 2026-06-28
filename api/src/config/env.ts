@@ -6,6 +6,7 @@ const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  DATABASE_URL: z.string().url(),
   COINGECKO_API_URL: z.string().url().default('https://api.coingecko.com/api/v3'),
   COINGECKO_API_KEY: z.string().optional(),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),

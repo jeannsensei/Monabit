@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { userRepository } from '@/repositories/user.repository';
+import { userRepository } from '@/repositories';
 
 const updateProfileSchema = z.object({
   username: z.string().optional(),

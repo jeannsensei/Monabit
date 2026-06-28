@@ -1,4 +1,4 @@
-import { favoritesRepository } from '@/repositories/favorites.repository';
+import { favoritesRepository } from '@/repositories';
 import type { FavoriteCoin } from '@/types';
 
 export const favoritesService = {

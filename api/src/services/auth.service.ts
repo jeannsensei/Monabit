@@ -1,5 +1,12 @@
 import { supabase } from '@/config/supabase';
+import { userRepository } from '@/repositories';
 import { logger } from '@/utils/logger';
+import type { UserProfile } from '@/types';
+
+function attachEmail(profile: UserProfile | null, email: string | undefined) {
+  if (!profile) return null;
+  return { ...profile, email };
+}
 
 export const authService = {
   async register(email: string, password: string, username?: string, full_name?: string) {
@@ -18,13 +25,9 @@ export const authService = {
       return { error: error.message };
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    const profile = await userRepository.findById(data.user.id);
 
-    return { user: { ...profile, email: data.user.email }, session: null };
+    return { user: attachEmail(profile, data.user.email), session: null };
   },
 
   async login(email: string, password: string) {
@@ -37,18 +40,14 @@ export const authService = {
       return { error: error.message };
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    const profile = await userRepository.findById(data.user.id);
 
     if (!profile || !profile.is_active) {
       return { error: 'Account is deactivated' };
     }
 
     return {
-      user: { ...profile, email: data.user.email },
+      user: attachEmail(profile, data.user.email),
       session: {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
@@ -67,18 +66,14 @@ export const authService = {
       return { error: error.message };
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
+    const profile = await userRepository.findById(data.user.id);
 
     if (!profile || !profile.is_active) {
       return { error: 'Account is deactivated' };
     }
 
     return {
-      user: { ...profile, email: data.user.email },
+      user: attachEmail(profile, data.user.email),
       session: {
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
@@ -101,15 +96,10 @@ export const authService = {
       return null;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user.id)
-      .single();
-
+    const profile = await userRepository.findById(data.user.id);
     if (!profile) return null;
 
-    return { ...profile, email: data.user.email };
+    return attachEmail(profile, data.user.email);
   },
 
   async refreshSession(refreshToken: string) {

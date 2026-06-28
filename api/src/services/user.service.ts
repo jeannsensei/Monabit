@@ -1,6 +1,6 @@
-import { userRepository } from '@/repositories/user.repository';
-import { auditRepository } from '@/repositories/audit.repository';
+import { userRepository, auditRepository } from '@/repositories';
 import { authService } from '@/services/auth.service';
+import { supabase } from '@/config/supabase';
 import { NotFoundError, ConflictError, ForbiddenError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { UserProfile } from '@/types';
@@ -18,7 +18,8 @@ export const userService = {
   },
 
   async create(adminId: string, data: { email: string; password: string; username?: string; full_name?: string; role?: string }, ip: string) {
-    const existing = await userRepository.findByEmail(data.email);
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const existing = authUsers?.users?.find((u) => u.email === data.email);
     if (existing) throw new ConflictError('A user with this email already exists');
 
     const result = await authService.register(data.email, data.password, data.username, data.full_name);
@@ -26,21 +27,23 @@ export const userService = {
       throw new ConflictError(result.error ?? 'Failed to create user');
     }
 
-    if (data.role === 'admin') {
-      await userRepository.update(result.user.id, { role: 'admin' });
+    const newUser = result.user as UserProfile & { email?: string };
+
+    if (data.role === 'admin' && newUser.id) {
+      await userRepository.update(newUser.id, { role: 'admin' });
     }
 
     await auditRepository.create({
       user_id: adminId,
       action: 'user.create',
       resource: 'user',
-      resource_id: result.user.id,
+      resource_id: newUser.id,
       details: { email: data.email, role: data.role ?? 'user' },
       ip_address: ip,
     });
 
-    logger.info({ adminId, newUserId: result.user.id }, 'Admin created new user');
-    return result.user;
+    logger.info({ adminId, newUserId: newUser.id }, 'Admin created new user');
+    return newUser;
   },
 
   async update(adminId: string, targetId: string, data: { username?: string; full_name?: string; role?: 'admin' | 'user'; is_active?: boolean }, ip: string) {

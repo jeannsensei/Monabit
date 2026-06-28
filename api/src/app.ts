@@ -10,6 +10,8 @@ import { generalLimiter } from '@/middlewares/rate-limit.middleware';
 import { idempotencyMiddleware } from '@/middlewares/idempotency.middleware';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import { supabase } from '@/config/supabase';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
 import { cacheService } from '@/services/cache.service';
 import { logger } from '@/utils/logger';
 import { startScheduler } from '@/utils/scheduler';
@@ -55,7 +57,7 @@ export function createApp() {
     let supabaseLatency = 0;
 
     try {
-      await supabase.from('profiles').select('id').limit(1);
+      await db.select().from(profiles).limit(1);
       supabaseLatency = Date.now() - start;
       supabaseStatus = 'connected';
     } catch {

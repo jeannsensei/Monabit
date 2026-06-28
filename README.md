@@ -10,7 +10,7 @@ A full-stack cryptocurrency market dashboard built with React, Express, TypeScri
 | State | Zustand (client), TanStack Query (server) |
 | Charts | Recharts |
 | Backend | Node.js, Express, TypeScript |
-| Database | Supabase (PostgreSQL + Auth) |
+| Database | Supabase (PostgreSQL + Auth) + Drizzle ORM |
 | External API | CoinGecko (free tier) |
 | Deployment | Google Cloud Run, Docker, GitHub Actions |
 | Testing | Vitest |
@@ -104,8 +104,8 @@ Every request flows through: **Routes → Controllers → Services → Repositor
 - **Routes**: Define endpoints and middleware chains. No logic.
 - **Controllers**: Handle HTTP concerns (parsing, status codes). No business logic.
 - **Services**: Business logic and orchestration (cache check → API call → transform → store).
-- **Repositories**: Data access layer. Encapsulates Supabase queries.
-- **Middlewares**: Cross-cutting concerns (auth, validation, rate limiting, idempotency).
+- **Repositories**: Data access layer using Drizzle ORM with type-safe PostgreSQL queries. Schema defined in code, migrations auto-generated via `drizzle-kit`.
+- **Supabase Auth**: Handles all authentication (email/password, Google OAuth, JWT). Separate from the data layer.
 
 This separation means services are testable without HTTP mocking, and switching databases only touches repositories.
 

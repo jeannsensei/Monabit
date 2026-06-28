@@ -6,6 +6,7 @@ export interface UserProfile {
   avatar_url: string | null;
   role: 'admin' | 'user';
   is_active: boolean;
+  preferences: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -55,4 +56,13 @@ export interface FavoriteCoin {
   coin_symbol: string;
   coin_name: string;
   created_at: string;
+}
+
+export interface AuditLogInput {
+  user_id: string;
+  action: string;
+  resource: string;
+  resource_id?: string;
+  details?: Record<string, unknown>;
+  ip_address?: string;
 }
