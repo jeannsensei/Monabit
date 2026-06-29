@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/useUsers';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Plus, Pencil, Ban, CheckCircle } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
+import { Plus, Pencil, Ban, CheckCircle, AlertTriangle } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 export function AdminUsersPage() {
@@ -12,6 +13,7 @@ export function AdminUsersPage() {
   const deleteUser = useDeleteUser();
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
 
   return (
     <div className="space-y-6">
@@ -82,20 +84,22 @@ export function AdminUsersPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => { setEditingUser(user); setShowForm(true); }}
-                          className="rounded-md p-1.5 hover:bg-accent"
-                          title="Edit user"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => deleteUser.mutate(user.id)}
-                          className="rounded-md p-1.5 hover:bg-accent"
-                          title={user.is_active ? 'Deactivate' : 'Activate'}
-                        >
-                          {user.is_active ? <Ban size={14} /> : <CheckCircle size={14} />}
-                        </button>
+                        <Tooltip content="Edit user">
+                          <button
+                            onClick={() => { setEditingUser(user); setShowForm(true); }}
+                            className="rounded-md p-1.5 hover:bg-accent"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={user.is_active ? 'Deactivate user' : 'Activate user'}>
+                          <button
+                            onClick={() => setDeletingUser(user)}
+                            className="rounded-md p-1.5 hover:bg-accent"
+                          >
+                            {user.is_active ? <Ban size={14} /> : <CheckCircle size={14} />}
+                          </button>
+                        </Tooltip>
                       </div>
                     </td>
                   </tr>
@@ -145,6 +149,64 @@ export function AdminUsersPage() {
           loading={createUser.isPending || updateUser.isPending}
         />
       )}
+
+      {deletingUser && (
+        <ConfirmDialog
+          title={deletingUser.is_active ? 'Deactivate User' : 'Activate User'}
+          message={
+            deletingUser.is_active
+              ? `Are you sure you want to deactivate ${deletingUser.full_name || deletingUser.username || 'this user'}? They will not be able to log in.`
+              : `Are you sure you want to reactivate ${deletingUser.full_name || deletingUser.username || 'this user'}?`
+          }
+          confirmLabel={deletingUser.is_active ? 'Deactivate' : 'Activate'}
+          onConfirm={() => {
+            deleteUser.mutate(deletingUser.id);
+            setDeletingUser(null);
+          }}
+          onCancel={() => setDeletingUser(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">{title}</h2>
+            <p className="text-sm text-muted-foreground">{message}</p>
+          </div>
+        </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button onClick={onCancel} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
