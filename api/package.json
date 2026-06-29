@@ -20,6 +20,7 @@
     "@supabase/supabase-js": "^2.49.1",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
@@ -30,6 +31,7 @@
     "pino-pretty": "^13.0.0",
     "postgres": "^3.4.9",
     "uuid": "^11.1.0",
+    "ws": "^8.21.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -41,6 +43,7 @@
     "@types/pg": "^8.20.0",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.20.1",
     "supertest": "^7.0.0",
