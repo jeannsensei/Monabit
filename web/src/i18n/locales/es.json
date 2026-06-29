@@ -5,6 +5,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "favorites": "Favoritos",
+    "alerts": "Alertas de Precio",
     "userManagement": "Gestión de Usuarios",
     "profile": "Perfil",
     "logout": "Cerrar sesión",
@@ -74,6 +75,20 @@
     "removed": "Eliminado de favoritos",
     "addFailed": "Error al añadir favorito",
     "removeFailed": "Error al eliminar favorito"
+  },
+  "alerts": {
+    "title": "Alertas de Precio",
+    "subtitle": "Recibe notificaciones cuando una moneda alcance tu precio objetivo",
+    "newAlert": "Nueva Alerta",
+    "empty": "Sin alertas aún. Crea una para empezar.",
+    "searchCoin": "Buscar Moneda",
+    "searchPlaceholder": "Buscar por nombre...",
+    "targetPrice": "Precio Objetivo",
+    "direction": "Dirección",
+    "above": "Superior",
+    "below": "Inferior",
+    "createAlert": "Crear Alerta",
+    "instructions": "Establece un precio objetivo para una criptomoneda. Cuando el precio de mercado cruce tu objetivo, la alerta se marcará como activada."
   },
   "admin": {
     "title": "Gestión de Usuarios",

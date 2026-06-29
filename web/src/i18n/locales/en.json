@@ -5,6 +5,7 @@
   "nav": {
     "dashboard": "Dashboard",
     "favorites": "Favorites",
+    "alerts": "Price Alerts",
     "userManagement": "User Management",
     "profile": "Profile",
     "logout": "Logout",
@@ -74,6 +75,20 @@
     "removed": "Removed from favorites",
     "addFailed": "Failed to add favorite",
     "removeFailed": "Failed to remove favorite"
+  },
+  "alerts": {
+    "title": "Price Alerts",
+    "subtitle": "Get notified when a coin reaches your target price",
+    "newAlert": "New Alert",
+    "empty": "No alerts yet. Create one to get started.",
+    "searchCoin": "Search Coin",
+    "searchPlaceholder": "Search by name...",
+    "targetPrice": "Target Price",
+    "direction": "Direction",
+    "above": "Above",
+    "below": "Below",
+    "createAlert": "Create Alert",
+    "instructions": "Set a target price for a cryptocurrency. When the market price crosses your target, the alert will be marked as triggered."
   },
   "admin": {
     "title": "User Management",
