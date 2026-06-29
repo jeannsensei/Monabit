@@ -54,18 +54,6 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
       role: isFirst ? 'admin' : 'user',
     });
     profile = await userRepository.findById(authData.user.id);
-  } else if (profile.role !== 'admin') {
-    const [{ count: total }] = await db
-      .select({ count: count() })
-      .from(profiles)
-      .where(eq(profiles.role, 'admin'));
-    if (total === 0) {
-      await db
-        .update(profiles)
-        .set({ role: 'admin', updatedAt: new Date() })
-        .where(eq(profiles.id, authData.user.id));
-      profile = await userRepository.findById(authData.user.id);
-    }
   }
 
   if (!profile || !profile.is_active) {
