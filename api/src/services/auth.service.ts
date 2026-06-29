@@ -1,4 +1,7 @@
+import { env } from '@/config/env';
 import { supabase } from '@/config/supabase';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
 import { userRepository } from '@/repositories';
 import { logger } from '@/utils/logger';
 import type { UserProfile } from '@/types';
@@ -27,7 +30,17 @@ export const authService = {
 
     const profile = await userRepository.findById(data.user.id);
 
-    return { user: attachEmail(profile, data.user.email), session: null };
+    if (!profile) {
+      await db.insert(profiles).values({
+        id: data.user.id,
+        username: username ?? data.user.email ?? null,
+        fullName: full_name ?? null,
+        role: 'user',
+      });
+    }
+
+    const p = await userRepository.findById(data.user.id);
+    return { user: attachEmail(p, data.user.email), session: null };
   },
 
   async login(email: string, password: string) {
@@ -103,22 +116,31 @@ export const authService = {
   },
 
   async refreshSession(refreshToken: string) {
-    const { data, error } = await supabase.auth.refreshSession({
-      refresh_token: refreshToken,
-    });
+    try {
+      const response = await fetch(`${env.SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: env.SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
 
-    if (error) {
-      return { error: error.message };
-    }
+      if (!response.ok) {
+        const text = await response.text();
+        logger.error({ status: response.status, body: text }, 'Supabase refresh failed');
+        return { error: `Refresh failed: ${response.status}` };
+      }
 
-    const { session } = data;
-    if (!session) {
-      return { error: 'No session returned' };
+      const data = await response.json() as { access_token: string; refresh_token: string; expires_at?: number };
+      return {
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: data.expires_at ?? 0,
+      };
+    } catch (err) {
+      logger.error({ error: err }, 'Supabase refresh error');
+      return { error: 'Refresh request failed' };
     }
-    return {
-      access_token: session.access_token,
-      refresh_token: session.refresh_token,
-      expires_at: session.expires_at,
-    };
   },
 };

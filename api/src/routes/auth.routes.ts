@@ -11,6 +11,6 @@ router.post('/login', authLimiter, asyncHandler(authController.login));
 router.post('/google', authLimiter, asyncHandler(authController.googleLogin));
 router.post('/logout', asyncHandler(authController.logout));
 router.post('/refresh', asyncHandler(authController.refresh));
-router.get('/me', authMiddleware, asyncHandler(authController.me));
+router.get('/me', asyncHandler(authMiddleware), asyncHandler(authController.me));
 
 export { router as authRoutes };

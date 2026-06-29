@@ -5,7 +5,7 @@ import { asyncHandler } from '@/utils/async-handler';
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(asyncHandler(authMiddleware));
 
 router.get('/', asyncHandler(profileController.getProfile));
 router.put('/', asyncHandler(profileController.updateProfile));

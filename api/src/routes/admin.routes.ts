@@ -6,7 +6,7 @@ import { asyncHandler } from '@/utils/async-handler';
 
 const router = Router();
 
-router.use(authMiddleware, adminMiddleware);
+router.use(asyncHandler(authMiddleware), adminMiddleware);
 
 router.get('/users', asyncHandler(adminController.listUsers));
 router.get('/users/:id', asyncHandler(adminController.getUser));

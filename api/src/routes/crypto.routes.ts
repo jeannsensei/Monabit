@@ -5,7 +5,7 @@ import { asyncHandler } from '@/utils/async-handler';
 
 const router = Router();
 
-router.use(authMiddleware);
+router.use(asyncHandler(authMiddleware));
 
 router.get('/top10', asyncHandler(cryptoController.getTop10));
 router.get('/market-overview', asyncHandler(cryptoController.getMarketOverview));
