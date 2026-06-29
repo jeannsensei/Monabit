@@ -1,5 +1,6 @@
 import { eq, sql, count, and } from 'drizzle-orm';
 import { db } from '@/db';
+import { supabase } from '@/config/supabase';
 import { profiles, favorites, auditLogs } from '@/db/schema';
 import type { UserProfile, FavoriteCoin, AuditLogInput } from '@/types';
 
@@ -36,7 +37,13 @@ export const userRepository = {
       .where(eq(profiles.id, id))
       .limit(1);
 
-    return row ? mapProfile(row) : null;
+    if (!row) return null;
+
+    const profile = mapProfile(row);
+    const { data: authUser } = await supabase.auth.admin.getUserById(id);
+    profile.email = authUser?.user?.email;
+
+    return profile;
   },
 
   async findAll(page: number, perPage: number): Promise<{ data: UserProfile[]; total: number }> {
@@ -53,10 +60,16 @@ export const userRepository = {
       .offset(offset)
       .limit(perPage);
 
-    return {
-      data: rows.map(mapProfile),
-      total: countResult?.total ?? 0,
-    };
+    const data = rows.map(mapProfile);
+
+    const { data: authUsers } = await supabase.auth.admin.listUsers();
+    const emailMap = new Map(authUsers?.users?.map((u) => [u.id, u.email]) ?? []);
+
+    for (const profile of data) {
+      profile.email = emailMap.get(profile.id);
+    }
+
+    return { data, total: countResult?.total ?? 0 };
   },
 
   async update(id: string, data: {
@@ -67,9 +80,7 @@ export const userRepository = {
     is_active?: boolean;
     preferences?: Record<string, unknown>;
   }): Promise<UserProfile | null> {
-    const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
-    };
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
     if (data.username !== undefined) updateData.username = data.username;
     if (data.full_name !== undefined) updateData.fullName = data.full_name;
     if (data.avatar_url !== undefined) updateData.avatarUrl = data.avatar_url;
@@ -77,15 +88,9 @@ export const userRepository = {
     if (data.is_active !== undefined) updateData.isActive = data.is_active;
     if (data.preferences !== undefined) updateData.preferences = data.preferences;
 
-    if (Object.keys(updateData).length <= 1) {
-      return this.findById(id);
-    }
+    if (Object.keys(updateData).length <= 1) return this.findById(id);
 
-    await db
-      .update(profiles)
-      .set(updateData)
-      .where(eq(profiles.id, id));
-
+    await db.update(profiles).set(updateData).where(eq(profiles.id, id));
     return this.findById(id);
   },
 };
@@ -97,7 +102,6 @@ export const favoritesRepository = {
       .from(favorites)
       .where(eq(favorites.userId, userId))
       .orderBy(sql`${favorites.createdAt} DESC`);
-
     return rows.map(mapFavorite);
   },
 
@@ -116,7 +120,6 @@ export const favoritesRepository = {
         .limit(1);
       return existing ? mapFavorite(existing) : null;
     }
-
     return mapFavorite(row);
   },
 
@@ -124,7 +127,6 @@ export const favoritesRepository = {
     const result = await db
       .delete(favorites)
       .where(and(eq(favorites.userId, userId), eq(favorites.coinId, coinId)));
-
     return result.count > 0;
   },
 };
