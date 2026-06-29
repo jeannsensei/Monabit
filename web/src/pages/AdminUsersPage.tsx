@@ -92,14 +92,13 @@ export function AdminUsersPage() {
                             <Pencil size={14} />
                           </button>
                         </Tooltip>
-                        <Tooltip content={user.is_active ? 'Deactivate user' : 'Activate user'}>
-                          <button
-                            onClick={() => setDeletingUser(user)}
-                            className="rounded-md p-1.5 hover:bg-accent"
-                          >
-                            {user.is_active ? <Ban size={14} /> : <CheckCircle size={14} />}
-                          </button>
-                        </Tooltip>
+                        <button
+                          title={user.is_active ? 'Deactivate user' : 'Activate user'}
+                          onClick={() => setDeletingUser(user)}
+                          className="rounded-md p-1.5 hover:bg-accent"
+                        >
+                          {user.is_active ? <Ban size={14} /> : <CheckCircle size={14} />}
+                        </button>
                       </div>
                     </td>
                   </tr>
