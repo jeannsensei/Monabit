@@ -1,41 +1,42 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/services/api';
-import type { FavoriteCoin } from '@/types';
-import { Star, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { useFavorites } from '@/hooks/useFavorites';
+import { useCoinsByIds, usePriceHistory } from '@/hooks/useCrypto';
+import { CryptoTable } from '@/components/crypto/CryptoTable';
+import { PriceChart } from '@/components/crypto/PriceChart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
+import { Star, AlertCircle } from 'lucide-react';
 
 export function FavoritesPage() {
-  const queryClient = useQueryClient();
-  const { data: favorites, isLoading, error, refetch } = useQuery({
-    queryKey: ['favorites'],
-    queryFn: () => apiRequest<FavoriteCoin[]>('/favorites'),
-    staleTime: 300_000,
-  });
+  const { favorites, favoriteIds, toggle: toggleFavorite, isLoading: favsLoading } = useFavorites();
+  const coinIds = favorites.map((f) => f.coin_id);
+  const { data: coins, isLoading: coinsLoading, error } = useCoinsByIds(coinIds);
+  const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
+  const { data: priceHistory, isLoading: historyLoading } = usePriceHistory(selectedCoin, 7);
 
-  const removeFavorite = useMutation({
-    mutationFn: (coinId: string) => apiRequest(`/favorites/${coinId}`, { method: 'DELETE' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      toast.success('Removed from favorites');
-    },
-  });
-
-  if (isLoading) {
+  if (favsLoading) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Favorites</h1>
-        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Favorites</h1>
+        </div>
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (favorites.length === 0) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Favorites</h1>
-        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-          Failed to load favorites. <button onClick={() => refetch()} className="underline">Retry</button>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Favorites</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center rounded-lg border bg-card py-16">
+          <Star className="h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-muted-foreground">
+            No favorites yet. Star coins from the dashboard.
+          </p>
         </div>
       </div>
     );
@@ -43,34 +44,34 @@ export function FavoritesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="flex items-center gap-2">
         <h1 className="text-2xl font-bold">Favorites</h1>
-        <p className="text-sm text-muted-foreground">Your bookmarked cryptocurrencies</p>
+        <span className="text-sm text-muted-foreground">({favorites.length} coins)</span>
       </div>
 
-      {!favorites || favorites.length === 0 ? (
-        <div className="rounded-lg border bg-card p-12 text-center">
-          <Star className="mx-auto h-12 w-12 text-muted-foreground/50" />
-          <p className="mt-4 text-muted-foreground">No favorites yet. Search and bookmark coins from the dashboard.</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {favorites.map((fav) => (
-            <div key={fav.id} className="flex items-center justify-between rounded-lg border bg-card p-4">
-              <div>
-                <p className="font-medium">{fav.coin_name}</p>
-                <span className="text-xs uppercase text-muted-foreground">{fav.coin_symbol}</span>
-              </div>
-              <button
-                onClick={() => removeFavorite.mutate(fav.coin_id)}
-                className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+      {error && (
+        <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertCircle size={14} className="inline mr-1" />
+          Failed to load price data
         </div>
       )}
+
+      {selectedCoin && (
+        <PriceChart
+          coinId={selectedCoin}
+          data={priceHistory}
+          isLoading={historyLoading}
+          onClose={() => setSelectedCoin(null)}
+        />
+      )}
+
+      {coinsLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: favorites.length }).map((_, i) => <Skeleton key={i} className="h-16 rounded-lg" />)}
+        </div>
+      ) : coins ? (
+        <CryptoTable coins={coins} onSelectCoin={setSelectedCoin} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />
+      ) : null}
     </div>
   );
 }

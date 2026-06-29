@@ -129,4 +129,34 @@ export const cryptoService = {
     cacheService.set(cacheKey, response, 120);
     return response;
   },
+
+  async getCoinsByIds(ids: string[]) {
+    const cacheKey = `${CACHE_PREFIX}by-ids:${ids.sort().join(',')}`;
+    const cached = cacheService.get<CryptoCoin[]>(cacheKey);
+    if (cached) return cached;
+
+    const coins = await coingeckoService.getCoinsByIds(ids);
+    const transformed: CryptoCoin[] = (coins as Array<Record<string, unknown>>).map((c) => ({
+      id: c.id as string,
+      symbol: c.symbol as string,
+      name: c.name as string,
+      image: c.image as string,
+      current_price: c.current_price as number,
+      market_cap: c.market_cap as number,
+      market_cap_rank: c.market_cap_rank as number,
+      total_volume: c.total_volume as number,
+      high_24h: c.high_24h as number,
+      low_24h: c.low_24h as number,
+      price_change_percentage_24h: c.price_change_percentage_24h as number,
+      price_change_percentage_7d: c.price_change_percentage_7d_in_currency as number,
+      market_cap_change_percentage_24h: c.market_cap_change_percentage_24h as number,
+      circulating_supply: c.circulating_supply as number,
+      total_supply: c.total_supply as number | null,
+      sparkline_in_7d: c.sparkline_in_7d as { price: number[] },
+      last_updated: c.last_updated as string,
+    }));
+
+    cacheService.set(cacheKey, transformed, 60);
+    return transformed;
+  },
 };

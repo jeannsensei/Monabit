@@ -57,4 +57,19 @@ export const cryptoController = {
       next(error);
     }
   },
+
+  async getByIds(req: Request, res: Response, next: NextFunction) {
+    try {
+      const idsParam = String(req.query.ids ?? '');
+      if (!idsParam) {
+        res.json([]);
+        return;
+      }
+      const ids = idsParam.split(',').map((s) => s.trim()).filter(Boolean);
+      const coins = await cryptoService.getCoinsByIds(ids);
+      res.json(coins);
+    } catch (error) {
+      next(error);
+    }
+  },
 };

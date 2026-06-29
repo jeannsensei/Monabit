@@ -74,4 +74,15 @@ export const coingeckoService = {
   async searchCoins(query: string) {
     return fetchCoinGecko('/search', { query });
   },
+
+  async getCoinsByIds(ids: string[], currency = 'usd') {
+    return fetchCoinGecko('/coins/markets', {
+      vs_currency: currency,
+      ids: ids.join(','),
+      order: 'market_cap_desc',
+      per_page: '250',
+      sparkline: 'true',
+      price_change_percentage: '24h,7d',
+    });
+  },
 };

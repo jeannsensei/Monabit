@@ -47,3 +47,14 @@ export function useSearchCoins(query: string) {
     staleTime: 120_000,
   });
 }
+
+export function useCoinsByIds(ids: string[]) {
+  const sorted = [...ids].sort();
+  return useQuery({
+    queryKey: ['crypto', 'by-ids', sorted],
+    queryFn: () => apiRequest<CryptoCoin[]>(`/crypto/by-ids?ids=${sorted.join(',')}`),
+    enabled: ids.length > 0,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+}
