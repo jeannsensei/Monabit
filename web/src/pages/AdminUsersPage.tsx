@@ -1,9 +1,31 @@
 import { useState } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/useUsers';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
-import { Plus, Pencil, Ban, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Modal } from '@/components/ui/modal';
+import { Select, SelectItem } from '@/components/ui/select';
+import { Plus, Pencil, Ban, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import type { UserProfile } from '@/types';
+
+const createUserSchema = z.object({
+  email: z.string().email('Invalid email'),
+  password: z.string().min(8, 'At least 8 characters'),
+  username: z.string().optional(),
+  full_name: z.string().optional(),
+  role: z.enum(['admin', 'user']),
+});
+
+const editUserSchema = z.object({
+  username: z.string().optional(),
+  full_name: z.string().optional(),
+  role: z.enum(['admin', 'user']),
+});
+
+type CreateInput = z.infer<typeof createUserSchema>;
+type EditInput = z.infer<typeof editUserSchema>;
 
 export function AdminUsersPage() {
   const [page, setPage] = useState(1);
@@ -135,148 +157,192 @@ export function AdminUsersPage() {
       ) : null}
 
       {showForm && (
-        <UserFormModal
-          user={editingUser}
-          onClose={() => setShowForm(false)}
-          onSave={(data) => {
-            if (editingUser) {
-              updateUser.mutate({ id: editingUser.id, ...data });
-            } else {
-              createUser.mutate(data as { email: string; password: string; username?: string; full_name?: string; role?: string });
-            }
-            setShowForm(false);
-          }}
-          loading={createUser.isPending || updateUser.isPending}
-        />
+        <Modal open onClose={() => setShowForm(false)}>
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
+            {editingUser ? (
+              <EditUserForm
+                user={editingUser}
+                loading={updateUser.isPending}
+                onSubmit={(data) => {
+                  updateUser.mutate({ id: editingUser.id, ...data });
+                  setShowForm(false);
+                }}
+                onCancel={() => setShowForm(false)}
+              />
+            ) : (
+              <CreateUserForm
+                loading={createUser.isPending}
+                onSubmit={(data) => {
+                  createUser.mutate(data);
+                  setShowForm(false);
+                }}
+                onCancel={() => setShowForm(false)}
+              />
+            )}
+          </div>
+        </Modal>
       )}
 
       {deletingUser && (
-        <ConfirmDialog
-          title={deletingUser.is_active ? 'Deactivate User' : 'Activate User'}
-          message={
-            deletingUser.is_active
-              ? `Are you sure you want to deactivate ${deletingUser.full_name || deletingUser.username || 'this user'}? They will not be able to log in.`
-              : `Are you sure you want to reactivate ${deletingUser.full_name || deletingUser.username || 'this user'}?`
-          }
-          confirmLabel={deletingUser.is_active ? 'Deactivate' : 'Activate'}
-          onConfirm={() => {
-            deleteUser.mutate(deletingUser.id);
-            setDeletingUser(null);
-          }}
-          onCancel={() => setDeletingUser(null)}
-        />
+        <Modal open onClose={() => setDeletingUser(null)}>
+          <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold">{deletingUser.is_active ? 'Deactivate User' : 'Activate User'}</h2>
+                <p className="text-sm text-muted-foreground">
+                  {deletingUser.is_active
+                    ? `Are you sure you want to deactivate ${deletingUser.full_name || deletingUser.username || 'this user'}? They will not be able to log in.`
+                    : `Are you sure you want to reactivate ${deletingUser.full_name || deletingUser.username || 'this user'}?`}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button onClick={() => setDeletingUser(null)} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
+                Cancel
+              </button>
+              <button
+                onClick={() => { deleteUser.mutate(deletingUser.id); setDeletingUser(null); }}
+                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deletingUser.is_active ? 'Deactivate' : 'Activate'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 }
 
-function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  onConfirm,
+function CreateUserForm({
+  loading,
+  onSubmit,
   onCancel,
 }: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onConfirm: () => void;
+  loading: boolean;
+  onSubmit: (data: { email: string; password: string; username?: string; full_name?: string; role: string }) => void;
   onCancel: () => void;
 }) {
+  const { register, handleSubmit, control, formState: { errors } } = useForm<CreateInput>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: { role: 'user' },
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold">{title}</h2>
-            <p className="text-sm text-muted-foreground">{message}</p>
-          </div>
+    <div>
+      <h2 className="text-lg font-semibold">Create User</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4" noValidate>
+        <div>
+          <label className="block text-sm font-medium">Email</label>
+          <input
+            type="email"
+            disabled={loading}
+            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            {...register('email')}
+          />
+          {errors.email && <p className="mt-1 text-xs text-destructive">{errors.email.message}</p>}
         </div>
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onCancel} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90"
-          >
-            {confirmLabel}
+        <div>
+          <label className="block text-sm font-medium">Password</label>
+          <input
+            type="password"
+            disabled={loading}
+            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+            {...register('password')}
+          />
+          {errors.password && <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Username</label>
+          <input type="text" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('username')} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Full Name</label>
+          <input type="text" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('full_name')} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Role</label>
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange} disabled={loading}>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">Cancel</button>
+          <button type="submit" disabled={loading} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Creating...' : 'Create'}
           </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
-function UserFormModal({
+function EditUserForm({
   user,
-  onClose,
-  onSave,
   loading,
+  onSubmit,
+  onCancel,
 }: {
-  user: UserProfile | null;
-  onClose: () => void;
-  onSave: (data: Record<string, unknown>) => void;
+  user: UserProfile;
   loading: boolean;
+  onSubmit: (data: EditInput) => void;
+  onCancel: () => void;
 }) {
+  const { register, handleSubmit, control, formState: { errors } } = useForm<EditInput>({
+    resolver: zodResolver(editUserSchema),
+    values: {
+      username: user.username ?? '',
+      full_name: user.full_name ?? '',
+      role: user.role,
+    },
+  });
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
-        <h2 className="text-lg font-semibold">{user ? 'Edit User' : 'Create User'}</h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const form = e.target as HTMLFormElement;
-            const data: Record<string, unknown> = {};
-            if (!user) {
-              data.email = (form.elements.namedItem('email') as HTMLInputElement).value;
-              data.password = (form.elements.namedItem('password') as HTMLInputElement).value;
-            }
-            data.username = (form.elements.namedItem('username') as HTMLInputElement).value;
-            data.full_name = (form.elements.namedItem('full_name') as HTMLInputElement).value;
-            data.role = (form.elements.namedItem('role') as HTMLSelectElement).value;
-            onSave(data);
-          }}
-          className="mt-4 space-y-4"
-        >
-          {!user && (
-            <>
-              <div>
-                <label className="block text-sm font-medium">Email</label>
-                <input name="email" type="email" required className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium">Password</label>
-                <input name="password" type="password" required minLength={8} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-              </div>
-            </>
-          )}
-          <div>
-            <label className="block text-sm font-medium">Username</label>
-            <input name="username" type="text" defaultValue={user?.username ?? ''} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Full Name</label>
-            <input name="full_name" type="text" defaultValue={user?.full_name ?? ''} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Role</label>
-            <select name="role" defaultValue={user?.role ?? 'user'} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="rounded-md border px-4 py-2 text-sm">Cancel</button>
-            <button type="submit" disabled={loading} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50">
-              {loading ? 'Saving...' : user ? 'Update' : 'Create'}
-            </button>
-          </div>
-        </form>
-      </div>
+    <div>
+      <h2 className="text-lg font-semibold">Edit User</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4" noValidate>
+        <div>
+          <label className="block text-sm font-medium">Username</label>
+          <input type="text" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('username')} />
+          {errors.username && <p className="mt-1 text-xs text-destructive">{errors.username.message}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Full Name</label>
+          <input type="text" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('full_name')} />
+          {errors.full_name && <p className="mt-1 text-xs text-destructive">{errors.full_name.message}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Role</label>
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <Select value={field.value} onValueChange={field.onChange} disabled={loading}>
+                <SelectItem value="user">User</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </Select>
+            )}
+          />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">Cancel</button>
+          <button type="submit" disabled={loading} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            {loading ? 'Saving...' : 'Update'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
