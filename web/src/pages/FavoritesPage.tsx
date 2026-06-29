@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFavorites } from '@/hooks/useFavorites';
-import { useCoinsByIds, usePriceHistory } from '@/hooks/useCrypto';
+import { useCoinsByIds } from '@/hooks/useCrypto';
 import { CryptoTable } from '@/components/crypto/CryptoTable';
 import { PriceChart } from '@/components/crypto/PriceChart';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,7 +11,6 @@ export function FavoritesPage() {
   const coinIds = favorites.map((f) => f.coin_id);
   const { data: coins, isLoading: coinsLoading, error } = useCoinsByIds(coinIds);
   const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
-  const { data: priceHistory, isLoading: historyLoading } = usePriceHistory(selectedCoin, 7);
 
   if (favsLoading) {
     return (
@@ -59,8 +58,6 @@ export function FavoritesPage() {
       {selectedCoin && (
         <PriceChart
           coinId={selectedCoin}
-          data={priceHistory}
-          isLoading={historyLoading}
           onClose={() => setSelectedCoin(null)}
         />
       )}

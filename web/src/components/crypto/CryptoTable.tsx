@@ -7,9 +7,10 @@ interface CryptoTableProps {
   onSelectCoin: (coinId: string) => void;
   favoriteIds: Set<string>;
   onToggleFavorite: (coin: { coin_id: string; coin_symbol: string; coin_name: string }) => void;
+  selectedCoinId?: string | null;
 }
 
-export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite }: CryptoTableProps) {
+export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite, selectedCoinId }: CryptoTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
@@ -32,7 +33,12 @@ export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite
               <tr
                 key={coin.id}
                 onClick={() => onSelectCoin(coin.id)}
-                className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                className={cn(
+                  'border-b transition-colors cursor-pointer',
+                  coin.id === selectedCoinId
+                    ? 'bg-primary/5 hover:bg-primary/10'
+                    : 'hover:bg-muted/50',
+                )}
               >
                 <td className="px-2 py-3 text-center">
                   <button

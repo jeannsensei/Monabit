@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useTop10Crypto, useMarketOverview, usePriceHistory } from '@/hooks/useCrypto';
+import { useTop10Crypto, useMarketOverview } from '@/hooks/useCrypto';
 import { useFavorites } from '@/hooks/useFavorites';
 import { CryptoTable } from '@/components/crypto/CryptoTable';
 import { KPICards } from '@/components/crypto/KPICards';
 import { PriceChart } from '@/components/crypto/PriceChart';
 import { CoinSearch } from '@/components/crypto/CoinSearch';
+import { CoinDetailBar } from '@/components/crypto/CoinDetailBar';
 import { LastUpdated } from '@/components/crypto/LastUpdated';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
@@ -13,7 +14,6 @@ export function DashboardPage() {
   const { data: cryptoData, isLoading: cryptoLoading, error: cryptoError, refetch: refetchCrypto } = useTop10Crypto();
   const { data: overview, isLoading: overviewLoading } = useMarketOverview();
   const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
-  const { data: priceHistory, isLoading: historyLoading } = usePriceHistory(selectedCoin, 7);
   const { favoriteIds, toggle: toggleFavorite } = useFavorites();
 
   return (
@@ -36,15 +36,24 @@ export function DashboardPage() {
         <KPICards overview={overview} />
       ) : null}
 
-      <CoinSearch onSelect={(coinId) => setSelectedCoin(coinId)} />
+      <CoinSearch onSelect={(coinId) => setSelectedCoin(coinId)} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />
 
       {selectedCoin && (
-        <PriceChart
-          coinId={selectedCoin}
-          data={priceHistory}
-          isLoading={historyLoading}
-          onClose={() => setSelectedCoin(null)}
-        />
+        <>
+          <CoinDetailBar
+            coinId={selectedCoin}
+            isFavorite={favoriteIds.has(selectedCoin)}
+            onToggleFavorite={() => toggleFavorite({
+              coin_id: selectedCoin,
+              coin_symbol: cryptoData?.data.find((c) => c.id === selectedCoin)?.symbol ?? '',
+              coin_name: cryptoData?.data.find((c) => c.id === selectedCoin)?.name ?? '',
+            })}
+          />
+          <PriceChart
+            coinId={selectedCoin}
+            onClose={() => setSelectedCoin(null)}
+          />
+        </>
       )}
 
       {cryptoError && (
@@ -70,7 +79,7 @@ export function DashboardPage() {
           ))}
         </div>
       ) : cryptoData ? (
-        <CryptoTable coins={cryptoData.data} onSelectCoin={setSelectedCoin} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />
+        <CryptoTable coins={cryptoData.data} onSelectCoin={setSelectedCoin} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} selectedCoinId={selectedCoin} />
       ) : null}
     </div>
   );
