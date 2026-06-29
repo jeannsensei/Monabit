@@ -6,6 +6,7 @@ export interface UserProfile {
   avatar_url: string | null;
   role: 'admin' | 'user';
   is_active: boolean;
+  preferences: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
