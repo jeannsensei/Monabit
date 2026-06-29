@@ -7,8 +7,9 @@ import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/u
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectItem } from '@/components/ui/select';
-import { Plus, Pencil, Ban, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Ban, CheckCircle, Loader2 } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 const createUserSchema = z.object({
@@ -135,27 +136,16 @@ export function AdminUsersPage() {
       )}
 
       {deletingUser && (
-        <Modal open onClose={() => setDeletingUser(null)}>
-          <div className="w-full max-w-sm rounded-lg border bg-card p-6 shadow-lg">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-destructive/10"><AlertTriangle className="h-5 w-5 text-destructive" /></div>
-              <div>
-                <h2 className="text-lg font-semibold">{deletingUser.is_active ? t('admin.deactivateUser') : t('admin.activateUser')}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {deletingUser.is_active
-                    ? t('admin.deactivateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })
-                    : t('admin.activateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })}
-                </p>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button onClick={() => setDeletingUser(null)} className="rounded-md border px-4 py-2 text-sm hover:bg-accent">{t('admin.cancel')}</button>
-              <button onClick={() => { deleteUser.mutate(deletingUser.id); setDeletingUser(null); }} className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90">
-                {deletingUser.is_active ? t('admin.deactivate') : t('admin.activate')}
-              </button>
-            </div>
-          </div>
-        </Modal>
+        <ConfirmDialog
+          open
+          title={deletingUser.is_active ? t('admin.deactivateUser') : t('admin.activateUser')}
+          message={deletingUser.is_active
+            ? t('admin.deactivateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })
+            : t('admin.activateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })}
+          confirmLabel={deletingUser.is_active ? t('admin.deactivate') : t('admin.activate')}
+          onConfirm={() => { deleteUser.mutate(deletingUser.id); setDeletingUser(null); }}
+          onCancel={() => setDeletingUser(null)}
+        />
       )}
     </div>
   );
