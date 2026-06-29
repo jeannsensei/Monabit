@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { supabase } from '@/config/supabase';
 import { userService } from '@/services/user.service';
+import { AppError } from '@/utils/errors';
 
 const createUserSchema = z.object({
   email: z.string().email(),
@@ -62,6 +64,17 @@ export const adminController = {
     try {
       const user = await userService.deactivate(req.user.id, String(req.params.id), String(req.ip ?? 'unknown'));
       res.json({ message: 'User deactivated', user });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { password } = z.object({ password: z.string().min(8) }).parse(req.body);
+      const { data, error } = await supabase.auth.admin.updateUserById(String(req.params.id), { password });
+      if (error) throw new AppError(400, error.message);
+      res.json({ message: 'Password updated' });
     } catch (error) {
       next(error);
     }
