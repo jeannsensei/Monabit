@@ -10,7 +10,8 @@ import './index.css';
 import './i18n/i18n';
 
 const hash = window.location.hash;
-if (hash && hash.includes('access_token=')) {
+const isRecovery = hash && hash.includes('type=recovery');
+if (hash && hash.includes('access_token=') && !isRecovery) {
   const params = new URLSearchParams(hash.replace(/^#/, ''));
   const t = params.get('access_token');
   if (t) {

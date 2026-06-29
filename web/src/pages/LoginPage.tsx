@@ -46,6 +46,10 @@ export function LoginPage() {
 
         <GoogleButton />
 
+        <p className="text-center text-xs text-muted-foreground">
+          <Link to="/auth/forgot" className="text-primary hover:underline">{t('auth.forgotPassword')}</Link>
+        </p>
+
         <p className="text-center text-sm text-muted-foreground">
           {t('auth.noAccount')}{' '}
           <Link to="/register" className="font-medium text-primary hover:underline">
