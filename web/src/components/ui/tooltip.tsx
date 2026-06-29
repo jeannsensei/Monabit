@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 
 interface TooltipProps {
@@ -7,20 +9,62 @@ interface TooltipProps {
 }
 
 export function Tooltip({ children, content, side = 'top' }: TooltipProps) {
+  const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
+  const show = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPos({
+        top: side === 'top' ? rect.top - 6 : rect.bottom + 6,
+        left: rect.left + rect.width / 2,
+      });
+    }
+    setVisible(true);
+  };
+
+  const hide = () => setVisible(false);
+
+  useEffect(() => {
+    if (!visible) return;
+    const handler = () => setVisible(false);
+    document.addEventListener('scroll', handler, true);
+    return () => document.removeEventListener('scroll', handler, true);
+  }, [visible]);
+
   return (
-    <div className="group relative inline-flex">
-      {children}
+    <>
       <div
-        className={cn(
-          'pointer-events-none absolute left-1/2 -translate-x-1/2 z-[9999]',
-          'opacity-0 group-hover:opacity-100 transition-opacity duration-150',
-          'whitespace-nowrap rounded-md bg-popover px-2 py-1 text-xs',
-          'text-popover-foreground shadow-md border',
-          side === 'top' ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
-        )}
+        ref={ref}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={hide}
+        className="inline-flex"
       >
-        {content}
+        {children}
       </div>
-    </div>
+      {visible &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{
+              position: 'fixed',
+              left: pos.left,
+              top: pos.top,
+              transform: 'translate(-50%, 0)',
+            }}
+            className={cn(
+              'z-[9999] whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-xs',
+              'text-popover-foreground shadow-md pointer-events-none',
+              side === 'top' && '-translate-y-full',
+            )}
+          >
+            {content}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }
