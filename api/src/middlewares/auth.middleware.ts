@@ -1,3 +1,4 @@
+import { sql, eq } from 'drizzle-orm';
 import type { Request, Response, NextFunction } from 'express';
 import { supabase } from '@/config/supabase';
 import { db } from '@/db';
@@ -39,14 +40,32 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
 
   if (!profile) {
     logger.info({ userId: authData.user.id }, 'Profile not found — creating on the fly');
+
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(profiles);
+    const isFirst = total === 0;
+
     await db.insert(profiles).values({
       id: authData.user.id,
       username: authData.user.email ?? null,
       fullName: authData.user.user_metadata?.full_name as string ?? null,
       avatarUrl: authData.user.user_metadata?.avatar_url as string ?? null,
-      role: 'user',
+      role: isFirst ? 'admin' : 'user',
     });
     profile = await userRepository.findById(authData.user.id);
+  } else if (profile.role !== 'admin') {
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(profiles)
+      .where(sql`role = 'admin'`);
+    if (total === 0) {
+      await db
+        .update(profiles)
+        .set({ role: 'admin', updatedAt: new Date() })
+        .where(eq(profiles.id, authData.user.id));
+      profile = await userRepository.findById(authData.user.id);
+    }
   }
 
   if (!profile || !profile.is_active) {
