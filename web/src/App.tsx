@@ -13,6 +13,7 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage').then((m) => ({ 
 const AdminUsersPage = lazy(() => import('@/pages/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage })));
 const FavoritesPage = lazy(() => import('@/pages/FavoritesPage').then((m) => ({ default: m.FavoritesPage })));
+const AlertsPage = lazy(() => import('@/pages/AlertsPage').then((m) => ({ default: m.AlertsPage })));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 
 function PageLoader() {
@@ -36,6 +37,7 @@ export default function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<DashboardPage />} />
               <Route path="/favorites" element={<FavoritesPage />} />
+              <Route path="/alerts" element={<AlertsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
 
               <Route element={<AdminRoute />}>

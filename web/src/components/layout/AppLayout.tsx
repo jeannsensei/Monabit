@@ -1,8 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { useAlertNotifications } from '@/hooks/useAlertNotifications';
 
 export function AppLayout() {
+  useAlertNotifications();
+
   return (
     <div className="flex h-screen bg-background">
       <Sidebar />
