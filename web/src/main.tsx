@@ -7,6 +7,7 @@ import { useAuthStore } from '@/stores/auth.store';
 import { Toaster } from 'sonner';
 import App from './App';
 import './index.css';
+import './i18n/i18n';
 
 const hash = window.location.hash;
 if (hash && hash.includes('access_token=')) {

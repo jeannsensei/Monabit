@@ -1,5 +1,6 @@
 import { formatCurrency, formatCompactCurrency, formatPercent, cn } from '@/lib/utils';
 import type { CryptoCoin } from '@/types';
+import { useTranslation } from 'react-i18next';
 import { TrendingUp, TrendingDown, Star } from 'lucide-react';
 
 interface CryptoTableProps {
@@ -11,19 +12,20 @@ interface CryptoTableProps {
 }
 
 export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite, selectedCoinId }: CryptoTableProps) {
+  const { t } = useTranslation();
   return (
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b bg-muted/50">
             <th className="w-10 px-2 py-3 text-center font-medium"></th>
-            <th className="px-4 py-3 text-left font-medium">#</th>
-            <th className="px-4 py-3 text-left font-medium">Name</th>
-            <th className="px-4 py-3 text-right font-medium">Price</th>
-            <th className="px-4 py-3 text-right font-medium">24h %</th>
-            <th className="px-4 py-3 text-right font-medium hidden md:table-cell">7d %</th>
-            <th className="px-4 py-3 text-right font-medium hidden lg:table-cell">Market Cap</th>
-            <th className="px-4 py-3 text-right font-medium hidden lg:table-cell">Volume (24h)</th>
+            <th className="px-4 py-3 text-left font-medium">{t('dashboard.rank')}</th>
+            <th className="px-4 py-3 text-left font-medium">{t('dashboard.name')}</th>
+            <th className="px-4 py-3 text-right font-medium">{t('dashboard.price')}</th>
+            <th className="px-4 py-3 text-right font-medium">{t('dashboard.change24h')}</th>
+            <th className="px-4 py-3 text-right font-medium hidden md:table-cell">{t('dashboard.change7d')}</th>
+            <th className="px-4 py-3 text-right font-medium hidden lg:table-cell">{t('dashboard.marketCap')}</th>
+            <th className="px-4 py-3 text-right font-medium hidden lg:table-cell">{t('dashboard.volume24h')}</th>
           </tr>
         </thead>
         <tbody>
@@ -44,21 +46,11 @@ export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onToggleFavorite({
-                        coin_id: coin.id,
-                        coin_symbol: coin.symbol,
-                        coin_name: coin.name,
-                      });
+                      onToggleFavorite({ coin_id: coin.id, coin_symbol: coin.symbol, coin_name: coin.name });
                     }}
                     className="rounded-md p-1 transition-colors hover:bg-accent"
                   >
-                    <Star
-                      size={15}
-                      className={isFav
-                        ? 'fill-yellow-500 text-yellow-500'
-                        : 'text-muted-foreground'
-                      }
-                    />
+                    <Star size={15} className={isFav ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'} />
                   </button>
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{coin.market_cap_rank}</td>
@@ -73,12 +65,7 @@ export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite
                 </td>
                 <td className="px-4 py-3 text-right font-mono">{formatCurrency(coin.current_price)}</td>
                 <td className="px-4 py-3 text-right">
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-0.5 font-mono',
-                      coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500',
-                    )}
-                  >
+                  <span className={cn('inline-flex items-center gap-0.5 font-mono', coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500')}>
                     {coin.price_change_percentage_24h >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
                     {formatPercent(coin.price_change_percentage_24h)}
                   </span>
@@ -88,12 +75,8 @@ export function CryptoTable({ coins, onSelectCoin, favoriteIds, onToggleFavorite
                     {formatPercent(coin.price_change_percentage_7d)}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-right font-mono hidden lg:table-cell">
-                  {formatCompactCurrency(coin.market_cap)}
-                </td>
-                <td className="px-4 py-3 text-right font-mono hidden lg:table-cell">
-                  {formatCompactCurrency(coin.total_volume)}
-                </td>
+                <td className="px-4 py-3 text-right font-mono hidden lg:table-cell">{formatCompactCurrency(coin.market_cap)}</td>
+                <td className="px-4 py-3 text-right font-mono hidden lg:table-cell">{formatCompactCurrency(coin.total_volume)}</td>
               </tr>
             );
           })}

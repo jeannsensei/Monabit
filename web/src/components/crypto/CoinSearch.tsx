@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchCoins } from '@/hooks/useCrypto';
 import { Search, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,6 +11,7 @@ interface CoinSearchProps {
 }
 
 export function CoinSearch({ onSelect, favoriteIds, onToggleFavorite }: CoinSearchProps) {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const { data, isLoading } = useSearchCoins(query);
 
@@ -21,15 +23,14 @@ export function CoinSearch({ onSelect, favoriteIds, onToggleFavorite }: CoinSear
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search cryptocurrencies..."
+          placeholder={t('dashboard.searchPlaceholder')}
           className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
       </div>
-
       {query.length >= 2 && (
         <div className="absolute z-10 mt-1 w-full rounded-md border bg-card shadow-lg">
           {isLoading ? (
-            <p className="px-4 py-2 text-sm text-muted-foreground">Searching...</p>
+            <p className="px-4 py-2 text-sm text-muted-foreground">{t('dashboard.searching')}</p>
           ) : data?.coins && data.coins.length > 0 ? (
             <ul>
               {data.coins.slice(0, 8).map((coin) => {
@@ -37,10 +38,7 @@ export function CoinSearch({ onSelect, favoriteIds, onToggleFavorite }: CoinSear
                 return (
                   <li key={coin.id} className="flex items-center px-4 py-2 hover:bg-accent">
                     <button
-                      onClick={() => {
-                        onSelect(coin.id);
-                        setQuery('');
-                      }}
+                      onClick={() => { onSelect(coin.id); setQuery(''); }}
                       className="flex flex-1 items-center gap-2 text-sm text-left"
                     >
                       <img src={coin.thumb} alt={coin.name} className="h-5 w-5 rounded-full" />
@@ -49,29 +47,17 @@ export function CoinSearch({ onSelect, favoriteIds, onToggleFavorite }: CoinSear
                       <span className="ml-auto text-xs text-muted-foreground">#{coin.market_cap_rank}</span>
                     </button>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onToggleFavorite({
-                          coin_id: coin.id,
-                          coin_symbol: coin.symbol,
-                          coin_name: coin.name,
-                        });
-                      }}
+                      onClick={(e) => { e.stopPropagation(); onToggleFavorite({ coin_id: coin.id, coin_symbol: coin.symbol, coin_name: coin.name }); }}
                       className="ml-2 rounded-md p-1 transition-colors hover:bg-accent"
                     >
-                      <Star
-                        size={15}
-                        className={cn(
-                          isFav ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground',
-                        )}
-                      />
+                      <Star size={15} className={cn(isFav ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground')} />
                     </button>
                   </li>
                 );
               })}
             </ul>
           ) : (
-            <p className="px-4 py-2 text-sm text-muted-foreground">No results found</p>
+            <p className="px-4 py-2 text-sm text-muted-foreground">{t('dashboard.noResults')}</p>
           )}
         </div>
       )}

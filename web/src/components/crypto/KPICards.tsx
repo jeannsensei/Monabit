@@ -1,6 +1,6 @@
 import { DollarSign, BarChart3, Globe, Activity } from 'lucide-react';
-import { formatCompactCurrency, formatPercent } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
+import { formatCompactCurrency, formatPercent, cn } from '@/lib/utils';
 import type { MarketOverview } from '@/types';
 
 interface KPICardsProps {
@@ -8,25 +8,27 @@ interface KPICardsProps {
 }
 
 export function KPICards({ overview }: KPICardsProps) {
+  const { t } = useTranslation();
+
   const cards = [
     {
-      label: 'Total Market Cap',
+      label: t('dashboard.kpiTotalMarketCap'),
       value: formatCompactCurrency(overview.total_market_cap),
       change: overview.market_cap_change_percentage_24h,
       icon: DollarSign,
     },
     {
-      label: '24h Volume',
+      label: t('dashboard.kpi24hVolume'),
       value: formatCompactCurrency(overview.total_volume_24h),
       icon: BarChart3,
     },
     {
-      label: 'BTC Dominance',
+      label: t('dashboard.kpiBTCDominance'),
       value: `${overview.btc_dominance.toFixed(1)}%`,
       icon: Globe,
     },
     {
-      label: 'Active Cryptocurrencies',
+      label: t('dashboard.kpiActiveCryptos'),
       value: overview.active_cryptocurrencies.toLocaleString(),
       icon: Activity,
     },

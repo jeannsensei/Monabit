@@ -1,17 +1,19 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Star, Users, UserCog, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppStore } from '@/stores/app.store';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
-  { to: '/favorites', label: 'Favorites', icon: Star, roles: ['admin', 'user'] },
-  { to: '/admin/users', label: 'User Management', icon: Users, roles: ['admin'] },
-  { to: '/profile', label: 'Profile', icon: UserCog, roles: ['admin', 'user'] },
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard, roles: ['admin', 'user'] },
+  { to: '/favorites', labelKey: 'nav.favorites', icon: Star, roles: ['admin', 'user'] },
+  { to: '/admin/users', labelKey: 'nav.userManagement', icon: Users, roles: ['admin'] },
+  { to: '/profile', labelKey: 'nav.profile', icon: UserCog, roles: ['admin', 'user'] },
 ];
 
 export function Sidebar() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { sidebarOpen, setSidebarOpen } = useAppStore();
 
@@ -55,7 +57,7 @@ export function Sidebar() {
             }
           >
             <item.icon size={20} />
-            {sidebarOpen && <span>{item.label}</span>}
+            {sidebarOpen && <span>{t(item.labelKey)}</span>}
           </NavLink>
         ))}
       </nav>

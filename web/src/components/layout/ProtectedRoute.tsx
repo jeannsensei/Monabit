@@ -1,9 +1,12 @@
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/stores/auth.store';
 import { Loader2 } from 'lucide-react';
 
 export function ProtectedRoute() {
-  const { user, isLoading } = useAuth();
+  const { t } = useTranslation();
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
 
   if (isLoading) {
     return (
@@ -20,8 +23,7 @@ export function ProtectedRoute() {
   if (!user.is_active) {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
-        <h1 className="text-2xl font-bold">Account Deactivated</h1>
-        <p className="text-muted-foreground">Your account has been deactivated. Contact an administrator.</p>
+        <h1 className="text-2xl font-bold">{t('auth.accountDeactivated')}</h1>
       </div>
     );
   }
