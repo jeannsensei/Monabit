@@ -1,6 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { supabase } from '@/config/supabase';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
 import { userRepository } from '@/repositories';
+import { logger } from '@/utils/logger';
 import { UnauthorizedError, ForbiddenError } from '@/utils/errors';
 
 declare global {
@@ -32,7 +35,19 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     throw new UnauthorizedError('Invalid or expired token');
   }
 
-  const profile = await userRepository.findById(authData.user.id);
+  let profile = await userRepository.findById(authData.user.id);
+
+  if (!profile) {
+    logger.info({ userId: authData.user.id }, 'Profile not found — creating on the fly');
+    await db.insert(profiles).values({
+      id: authData.user.id,
+      username: authData.user.email ?? null,
+      fullName: authData.user.user_metadata?.full_name as string ?? null,
+      avatarUrl: authData.user.user_metadata?.avatar_url as string ?? null,
+      role: 'user',
+    });
+    profile = await userRepository.findById(authData.user.id);
+  }
 
   if (!profile || !profile.is_active) {
     throw new ForbiddenError('Account is deactivated or does not exist');
