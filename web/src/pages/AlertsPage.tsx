@@ -6,13 +6,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectItem } from '@/components/ui/select';
 import { Modal } from '@/components/ui/modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { Search, Trash2, Bell, Info } from 'lucide-react';
+import { Search, Trash2, Bell, Info, Pencil } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+import type { PriceAlert } from '@/types';
 
 export function AlertsPage() {
   const { t } = useTranslation();
-  const { alerts, isLoading, create, remove } = useAlerts();
+  const { alerts, isLoading, create, update, remove } = useAlerts();
   const [showForm, setShowForm] = useState(false);
+  const [editingAlert, setEditingAlert] = useState<PriceAlert | null>(null);
   const [search, setSearch] = useState('');
   const [selectedCoin, setSelectedCoin] = useState<{ id: string; symbol: string; name: string } | null>(null);
   const [deletingAlert, setDeletingAlert] = useState<{ id: string; symbol: string; target: number } | null>(null);
@@ -21,18 +23,47 @@ export function AlertsPage() {
   const { data: searchResults } = useSearchCoins(search);
   const { data: coinDetail } = useCoinDetail(selectedCoin?.id ?? null);
 
-  const handleCreate = () => {
+  const resetForm = () => {
+    setEditingAlert(null);
+    setSelectedCoin(null);
+    setSearch('');
+    setTargetPrice('');
+    setDirection('above');
+    setShowForm(false);
+  };
+
+  const openCreate = () => {
+    setEditingAlert(null);
+    setSelectedCoin(null);
+    setSearch('');
+    setTargetPrice('');
+    setDirection('above');
+    setShowForm(true);
+  };
+
+  const openEdit = (alert: PriceAlert) => {
+    setEditingAlert(alert);
+    setSelectedCoin({ id: alert.coin_id, symbol: alert.coin_symbol, name: alert.coin_symbol.toUpperCase() });
+    setSearch('');
+    setTargetPrice(alert.target_price.toLocaleString());
+    setDirection(alert.direction);
+    setShowForm(true);
+  };
+
+  const handleSave = () => {
     if (!selectedCoin || !targetPrice) return;
-    create({
+    const payload = {
       coin_id: selectedCoin.id,
       coin_symbol: selectedCoin.symbol,
-      target_price: parseFloat(targetPrice),
+      target_price: parseFloat(targetPrice.replace(/,/g, '')),
       direction,
-    });
-    setShowForm(false);
-    setSelectedCoin(null);
-    setTargetPrice('');
-    setSearch('');
+    };
+    if (editingAlert) {
+      update({ id: editingAlert.id, target_price: payload.target_price, direction: payload.direction });
+    } else {
+      create(payload);
+    }
+    resetForm();
   };
 
   return (
@@ -42,10 +73,7 @@ export function AlertsPage() {
           <h1 className="text-2xl font-bold">{t('alerts.title')}</h1>
           <p className="text-sm text-muted-foreground">{t('alerts.subtitle')}</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
+        <button onClick={openCreate} className="flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
           <Bell size={16} />
           {t('alerts.newAlert')}
         </button>
@@ -65,38 +93,36 @@ export function AlertsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium uppercase">{alert.coin_symbol}</span>
-                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                    alert.direction === 'above' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                  }`}>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${alert.direction === 'above' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                     {alert.direction === 'above' ? '↑ Above' : '↓ Below'}
                   </span>
-                  <span className="text-sm text-muted-foreground">
-                    ${alert.target_price.toLocaleString()}
-                  </span>
+                  <span className="text-sm text-muted-foreground">${alert.target_price.toLocaleString()}</span>
                 </div>
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   Created {new Date(alert.created_at).toLocaleDateString()}
                   {alert.is_triggered && ' — Triggered'}
                 </p>
               </div>
-                <button
-                    onClick={() => setDeletingAlert({ id: alert.id, symbol: alert.coin_symbol, target: alert.target_price })}
-                    className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => openEdit(alert)} className="rounded-md p-2 text-muted-foreground hover:bg-accent">
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => setDeletingAlert({ id: alert.id, symbol: alert.coin_symbol, target: alert.target_price })} className="rounded-md p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {showForm && (
-        <Modal open onClose={() => setShowForm(false)}>
+        <Modal open onClose={resetForm}>
           <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
-            <h2 className="text-lg font-semibold">{t('alerts.newAlert')}</h2>
+            <h2 className="text-lg font-semibold">{editingAlert ? 'Edit Alert' : t('alerts.newAlert')}</h2>
             <div className="mt-2 flex items-start gap-2 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <Info size={14} className="mt-0.5 shrink-0" />
-              <p>{t('alerts.instructions')}</p>
+              <p>{editingAlert ? 'Modifying this alert will reset its triggered state.' : t('alerts.instructions')}</p>
             </div>
             <div className="mt-4 space-y-4">
               <div>
@@ -108,38 +134,23 @@ export function AlertsPage() {
                         <span className="font-medium">{selectedCoin.name}</span>
                         <span className="uppercase text-xs text-muted-foreground">{selectedCoin.symbol}</span>
                         {coinDetail && (
-                          <span className="ml-auto font-mono text-xs text-muted-foreground">
-                            Current: {formatCurrency(coinDetail.current_price)}
-                          </span>
+                          <span className="ml-auto font-mono text-xs text-muted-foreground">Current: {formatCurrency(coinDetail.current_price)}</span>
                         )}
-                        <button
-                          onClick={() => { setSelectedCoin(null); setSearch(''); }}
-                          className="text-muted-foreground hover:text-foreground text-lg leading-none ml-1"
-                        >
-                          ×
-                        </button>
+                        {!editingAlert && (
+                          <button onClick={() => { setSelectedCoin(null); setSearch(''); }} className="text-muted-foreground hover:text-foreground text-lg leading-none ml-1">×</button>
+                        )}
                       </div>
                     </div>
                   ) : (
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                      <input
-                        type="text"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        placeholder={t('alerts.searchPlaceholder')}
-                        className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      />
+                      <input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('alerts.searchPlaceholder')} className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
                     </div>
                   )}
                   {search.length >= 2 && searchResults?.coins && !selectedCoin && (
                     <div className="absolute z-20 mt-1 w-full rounded-md border bg-card shadow-lg max-h-48 overflow-y-auto">
                       {searchResults.coins.slice(0, 8).map((c) => (
-                        <button
-                          key={c.id}
-                          onClick={() => { setSelectedCoin(c); setSearch(''); }}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent"
-                        >
+                        <button key={c.id} onClick={() => { setSelectedCoin(c); setSearch(''); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent">
                           <img src={c.thumb} alt={c.name} className="h-5 w-5 rounded-full" />
                           <span className="font-medium">{c.name}</span>
                           <span className="uppercase text-muted-foreground">{c.symbol}</span>
@@ -152,14 +163,12 @@ export function AlertsPage() {
 
               <div>
                 <label className="block text-sm font-medium">{t('alerts.targetPrice')}</label>
-                <input
-                  type="number"
-                  step="any"
-                  value={targetPrice}
-                  onChange={(e) => setTargetPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                />
+                <input type="text" inputMode="decimal" value={targetPrice} onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9.]/g, '');
+                  const parts = raw.split('.');
+                  const formatted = parts[0] ? Number(parts[0]).toLocaleString() : '';
+                  setTargetPrice(parts.length > 1 ? `${formatted}.${parts.slice(1).join('')}` : formatted);
+                }} placeholder="0.00" className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono" />
               </div>
 
               <div>
@@ -173,19 +182,16 @@ export function AlertsPage() {
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <button onClick={() => setShowForm(false)} className="rounded-md border px-4 py-2 text-sm">{t('admin.cancel')}</button>
-                <button
-                  onClick={handleCreate}
-                  disabled={!selectedCoin || !targetPrice}
-                  className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {t('alerts.createAlert')}
+                <button onClick={resetForm} className="rounded-md border px-4 py-2 text-sm">{t('admin.cancel')}</button>
+                <button onClick={handleSave} disabled={!selectedCoin || !targetPrice} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+                  {editingAlert ? 'Update Alert' : t('alerts.createAlert')}
                 </button>
               </div>
             </div>
           </div>
         </Modal>
       )}
+
       {deletingAlert && (
         <ConfirmDialog
           open

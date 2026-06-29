@@ -22,6 +22,16 @@ export function useAlerts() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string; target_price?: number; direction?: 'above' | 'below' }) =>
+      apiRequest<PriceAlert>(`/alerts/${id}`, { method: 'PUT', data }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      toast.success('Price alert updated');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const removeMutation = useMutation({
     mutationFn: (id: string) => apiRequest(`/alerts/${id}`, { method: 'DELETE' }),
     onSuccess: () => {
@@ -35,6 +45,7 @@ export function useAlerts() {
     alerts: query.data ?? [],
     isLoading: query.isLoading,
     create: createMutation.mutate,
+    update: updateMutation.mutate,
     remove: removeMutation.mutate,
   };
 }

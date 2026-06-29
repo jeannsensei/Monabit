@@ -1,41 +1,42 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/services/api';
 import { toast } from 'sonner';
-import type { PriceAlert } from '@/types';
 
-const notified = new Set<string>();
+type AlertState = Record<string, boolean>;
 
 export function useAlertNotifications() {
-  const prevRef = useRef<Map<string, boolean>>(new Map());
+  const prev = useRef<AlertState>({});
 
-  const { data: alerts } = useQuery({
-    queryKey: ['alerts', 'notifications'],
+  useQuery({
+    queryKey: ['alerts', 'check'],
     queryFn: async () => {
-      await apiRequest<{ triggered: string[] }>('/alerts/check', { method: 'POST' });
-      return apiRequest<PriceAlert[]>('/alerts');
+      const result = await apiRequest<{ triggered: string[]; rearmed: string[] }>('/alerts/check', { method: 'POST' });
+
+      for (const id of result.triggered) {
+        if (prev.current[id] === false || prev.current[id] === undefined) {
+          toast('Price alert triggered', {
+            description: 'A cryptocurrency has reached your target price',
+            duration: 10000,
+            action: { label: 'View', onClick: () => window.location.href = '/alerts' },
+          });
+        }
+        prev.current[id] = true;
+      }
+
+      for (const id of result.rearmed) {
+        if (prev.current[id] === true) {
+          toast('Alert rearmed', {
+            description: 'Price moved back — alert is active again',
+            duration: 6000,
+          });
+        }
+        prev.current[id] = false;
+      }
+
+      return result;
     },
     refetchInterval: 30_000,
     enabled: !!localStorage.getItem('monabit-access-token'),
   });
-
-  useEffect(() => {
-    if (!alerts) return;
-    for (const alert of alerts) {
-      const key = alert.id;
-      const was = prevRef.current.get(key);
-
-      if (alert.is_triggered && was === false && !notified.has(key)) {
-        notified.add(key);
-        toast(
-          `${alert.coin_symbol.toUpperCase()} ${alert.direction === 'above' ? 'exceeded' : 'fell below'} $${Number(alert.target_price).toLocaleString()}`,
-          {
-            description: 'Your price alert has been triggered',
-            duration: 8000,
-          },
-        );
-      }
-      prevRef.current.set(key, alert.is_triggered);
-    }
-  }, [alerts]);
 }
