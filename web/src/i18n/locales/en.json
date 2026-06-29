@@ -37,6 +37,18 @@
     "passwordMin8": "Password must be at least 8 characters",
     "passwordUppercase": "Must contain at least one uppercase letter",
     "passwordNumber": "Must contain at least one number",
+    "forgotPassword": "Forgot password?",
+    "forgotInstructions": "Enter your email and we'll send you a reset link",
+    "sendReset": "Send Reset Link",
+    "sending": "Sending...",
+    "checkEmail": "Check your email",
+    "resetSent": "We sent a reset link to {{email}}",
+    "backToLogin": "Back to login",
+    "newPassword": "New Password",
+    "newPasswordInstructions": "Enter your new password",
+    "passwordReset": "Password reset successful",
+    "passwordResetSuccess": "You can now log in with your new password",
+    "resetPassword": "Reset Password",
     "accountDeactivated": "Your account has been deactivated. Contact an administrator."
   },
   "dashboard": {

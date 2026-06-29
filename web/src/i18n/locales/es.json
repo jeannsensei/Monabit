@@ -37,6 +37,18 @@
     "passwordMin8": "La contraseña debe tener al menos 8 caracteres",
     "passwordUppercase": "Debe contener al menos una mayúscula",
     "passwordNumber": "Debe contener al menos un número",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "forgotInstructions": "Ingresa tu correo y te enviaremos un enlace de recuperación",
+    "sendReset": "Enviar enlace",
+    "sending": "Enviando...",
+    "checkEmail": "Revisa tu correo",
+    "resetSent": "Enviamos un enlace a {{email}}",
+    "backToLogin": "Volver al inicio",
+    "newPassword": "Nueva contraseña",
+    "newPasswordInstructions": "Ingresa tu nueva contraseña",
+    "passwordReset": "Contraseña actualizada",
+    "passwordResetSuccess": "Ahora puedes iniciar sesión con tu nueva contraseña",
+    "resetPassword": "Restablecer contraseña",
     "accountDeactivated": "Tu cuenta ha sido desactivada. Contacta a un administrador."
   },
   "dashboard": {
