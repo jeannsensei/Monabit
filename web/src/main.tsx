@@ -31,10 +31,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ThemeProvider>
+          <ThemeProvider>
           <App />
           <Toaster richColors position="top-right" />
-        </ThemeProvider>
+          </ThemeProvider>
       </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>,

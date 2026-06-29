@@ -1,70 +1,24 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
 
-interface TooltipProps {
-  children: React.ReactNode;
-  content: string;
-  side?: 'top' | 'bottom';
-}
-
-export function Tooltip({ children, content, side = 'top' }: TooltipProps) {
-  const [visible, setVisible] = useState(false);
-  const [pos, setPos] = useState({ top: 0, left: 0 });
-  const ref = useRef<HTMLDivElement>(null);
-
-  const show = () => {
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      setPos({
-        top: side === 'top' ? rect.top - 6 : rect.bottom + 6,
-        left: rect.left + rect.width / 2,
-      });
-    }
-    setVisible(true);
-  };
-
-  const hide = () => setVisible(false);
-
-  useEffect(() => {
-    if (!visible) return;
-    const handler = () => setVisible(false);
-    document.addEventListener('scroll', handler, true);
-    return () => document.removeEventListener('scroll', handler, true);
-  }, [visible]);
-
+export function Tooltip({ children, content, delayDuration = 300 }: { children: React.ReactNode; content: string; delayDuration?: number }) {
   return (
-    <>
-      <div
-        ref={ref}
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        className="inline-flex"
-      >
-        {children}
-      </div>
-      {visible &&
-        createPortal(
-          <div
-            role="tooltip"
-            style={{
-              position: 'fixed',
-              left: pos.left,
-              top: pos.top,
-              transform: 'translate(-50%, 0)',
-            }}
+    <TooltipPrimitive.Provider delayDuration={delayDuration}>
+      <TooltipPrimitive.Root>
+        <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+        <TooltipPrimitive.Portal>
+          <TooltipPrimitive.Content
+            sideOffset={4}
             className={cn(
-              'z-[9999] whitespace-nowrap rounded-md border bg-popover px-2 py-1 text-xs',
-              'text-popover-foreground shadow-md pointer-events-none',
-              side === 'top' && '-translate-y-full',
+              'z-[9999] overflow-hidden rounded-md border bg-popover px-3 py-1.5 text-xs',
+              'text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95',
             )}
           >
             {content}
-          </div>,
-          document.body,
-        )}
-    </>
+            <TooltipPrimitive.Arrow className="fill-popover" />
+          </TooltipPrimitive.Content>
+        </TooltipPrimitive.Portal>
+      </TooltipPrimitive.Root>
+    </TooltipPrimitive.Provider>
   );
 }
