@@ -183,7 +183,7 @@ This separation means services are testable without HTTP mocking, and switching 
 
 ## CoinGecko Integration
 
-I chose **CoinGecko** because its free tier requires no API key and provides comprehensive market data (top coins, global KPIs, historical charts, search) via a RESTful API.
+I chose **CoinGecko** because its free tier requires a free API key (no payment needed) and provides comprehensive market data (top coins, global KPIs, historical charts, search) via a RESTful API.
 
 ### Caching Strategy
 
@@ -198,6 +198,25 @@ To avoid hitting CoinGecko's rate limits (10-30 req/min on free tier):
 - **Exponential backoff retry**: 3 attempts with increasing delay on 429/5xx errors.
 - **Graceful degradation**: If CoinGecko is down, stale cached data is returned with a warning.
 - **Scheduler isolation**: Cache refresh failures don't affect user requests.
+
+## Price Alerts
+
+Users can set price alerts on any cryptocurrency. When a coin's price crosses the target threshold (above or below), the alert is marked as triggered.
+
+### How It Works
+
+1. **Creating an alert**: From the Alerts page in the sidebar, search for a coin, set a target price, and choose direction (above/below).
+2. **Storage**: Alerts are persisted in the `price_alerts` PostgreSQL table with the user's ID, coin ID, target price, and direction.
+3. **Checking**: A background job in the backend periodically checks active alerts against current CoinGecko prices. When triggered, the alert's `is_triggered` flag is set to `true`.
+4. **API**: `GET/POST/DELETE /api/alerts` — standard CRUD behind auth middleware.
+
+### Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/alerts` | Yes | List user's price alerts |
+| POST | `/api/alerts` | Yes | Create an alert (coin_id, coin_symbol, target_price, direction) |
+| DELETE | `/api/alerts/:id` | Yes | Remove an alert |
 
 ## Authentication & Security
 
@@ -226,34 +245,7 @@ To avoid hitting CoinGecko's rate limits (10-30 req/min on free tier):
 
 ## Deployment
 
-### Google Cloud Run
-
-The app is deployed as **two separate Cloud Run services**:
-
-| Service | Memory | CPU | Scaling |
-|---------|--------|-----|---------|
-| `monabit-api` (Express) | 512MiB | 1 | 0–5 instances |
-| `monabit-web` (nginx + React) | 256MiB | 1 | 0–5 instances |
-
-### CI/CD Pipeline (GitHub Actions)
-
-```
-PR Open:  lint → typecheck → test → ✓ (mergeable)
-Main Push: lint → typecheck → test → build Docker → push → deploy → health check
-```
-
-### Deployment Steps (Manual)
-
-1. Create a Google Cloud project and enable Cloud Run + Artifact Registry APIs
-2. Create a service account with `roles/run.admin` and `roles/storage.admin`, download JSON key
-3. Add to GitHub Secrets: `GCP_SA_KEY`, `GCP_PROJECT_ID`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-4. Push to `main` branch — deployment is automatic
-
-### Configuring Google OAuth
-
-1. In Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web)
-2. Add `https://YOUR_SUPABASE_PROJECT.supabase.co/auth/v1/callback` as authorized redirect URI
-3. Copy Client ID and Secret into Supabase Dashboard → Authentication → Providers → Google
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment instructions, environment variables, Google Cloud Run setup, and CI/CD pipeline details.
 
 ## AI Tools Usage
 
@@ -275,6 +267,7 @@ Main Push: lint → typecheck → test → build Docker → push → deploy → 
 - **Over-engineering bias**: The AI often suggested tools appropriate for large teams (Redis, Turborepo, Prisma) that added complexity without proportional value. I pushed back toward simplicity.
 - **Vigilance required**: AI-generated code covered "happy paths" well but missed edge cases, error handling, and security concerns. I added rate limiting, idempotency, input validation, and RLS policies myself.
 - **Context management**: For multi-hour sessions, the AI sometimes lost track of earlier decisions. I maintained the architectural vision and re-established context when needed.
+- **Reusability**: The AI initially duplicated patterns (inline confirm dialogs, form components, search logic) instead of creating reusable abstractions. I had to explicitly request shared components like `ConfirmDialog`, `Modal`, and `Tooltip` to reduce code duplication and improve maintainability.
 
 ## Known Limitations
 
