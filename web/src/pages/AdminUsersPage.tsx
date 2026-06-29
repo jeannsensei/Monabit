@@ -3,7 +3,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/hooks/useUsers';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetPassword } from '@/hooks/useUsers';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
@@ -200,15 +200,24 @@ function CreateUserForm({ loading, onSubmit, onCancel }: { loading: boolean; onS
 
 function EditUserForm({ user, loading, onSubmit, onCancel }: { user: UserProfile; loading: boolean; onSubmit: (data: EditInput) => void; onCancel: () => void }) {
   const { t } = useTranslation();
+  const resetPassword = useResetPassword();
+  const [newPassword, setNewPassword] = useState('');
   const { register, handleSubmit, control, formState: { errors } } = useForm<EditInput>({
     resolver: zodResolver(editUserSchema),
     values: { username: user.username ?? '', full_name: user.full_name ?? '', role: user.role },
   });
 
+  const onSubmitWithPassword = (data: EditInput) => {
+    onSubmit(data);
+    if (newPassword) {
+      resetPassword.mutate({ id: user.id, password: newPassword });
+    }
+  };
+
   return (
     <div>
       <h2 className="text-lg font-semibold">{t('admin.editUser')}</h2>
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-4" noValidate>
+      <form onSubmit={handleSubmit(onSubmitWithPassword)} className="mt-4 space-y-4" noValidate>
         <div>
           <label className="block text-sm font-medium">{t('auth.username')}</label>
           <input type="text" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('username')} />
@@ -227,6 +236,12 @@ function EditUserForm({ user, loading, onSubmit, onCancel }: { user: UserProfile
               <SelectItem value="admin">Admin</SelectItem>
             </Select>
           )} />
+        </div>
+        <div className="border-t pt-2">
+          <label className="block text-sm font-medium text-muted-foreground">{t('auth.password')} <span className="text-xs text-muted-foreground">(leave empty to keep current)</span></label>
+          <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} minLength={8}
+            className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button type="button" onClick={onCancel} className="rounded-md border px-4 py-2 text-sm">{t('admin.cancel')}</button>

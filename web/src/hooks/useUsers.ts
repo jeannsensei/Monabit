@@ -58,3 +58,16 @@ export function useDeleteUser() {
     },
   });
 }
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ id, password }: { id: string; password: string }) =>
+      apiRequest(`/admin/users/${id}/reset-password`, { method: 'POST', data: { password } }),
+    onSuccess: () => {
+      toast.success('Password updated');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
