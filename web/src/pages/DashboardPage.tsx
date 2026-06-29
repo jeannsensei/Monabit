@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTop10Crypto, useMarketOverview, usePriceHistory } from '@/hooks/useCrypto';
+import { useFavorites } from '@/hooks/useFavorites';
 import { CryptoTable } from '@/components/crypto/CryptoTable';
 import { KPICards } from '@/components/crypto/KPICards';
 import { PriceChart } from '@/components/crypto/PriceChart';
@@ -13,6 +14,7 @@ export function DashboardPage() {
   const { data: overview, isLoading: overviewLoading } = useMarketOverview();
   const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
   const { data: priceHistory, isLoading: historyLoading } = usePriceHistory(selectedCoin, 7);
+  const { favoriteIds, toggle: toggleFavorite } = useFavorites();
 
   return (
     <div className="space-y-6">
@@ -68,7 +70,7 @@ export function DashboardPage() {
           ))}
         </div>
       ) : cryptoData ? (
-        <CryptoTable coins={cryptoData.data} onSelectCoin={setSelectedCoin} />
+        <CryptoTable coins={cryptoData.data} onSelectCoin={setSelectedCoin} favoriteIds={favoriteIds} onToggleFavorite={toggleFavorite} />
       ) : null}
     </div>
   );
