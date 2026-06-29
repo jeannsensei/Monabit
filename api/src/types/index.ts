@@ -66,3 +66,15 @@ export interface AuditLogInput {
   details?: Record<string, unknown>;
   ip_address?: string;
 }
+
+export interface PriceAlert {
+  id: string;
+  user_id: string;
+  coin_id: string;
+  coin_symbol: string;
+  target_price: number;
+  direction: 'above' | 'below';
+  is_triggered: boolean;
+  is_active: boolean;
+  created_at: string;
+}
