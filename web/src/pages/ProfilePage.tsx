@@ -16,10 +16,10 @@ export function ProfilePage() {
     try {
       await apiRequest('/profile', {
         method: 'PUT',
-        body: JSON.stringify({
+        data: {
           username: (form.elements.namedItem('username') as HTMLInputElement).value,
           full_name: (form.elements.namedItem('full_name') as HTMLInputElement).value,
-        }),
+        },
       });
       toast.success('Profile updated');
     } catch (err) {

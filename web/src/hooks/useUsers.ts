@@ -16,7 +16,7 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: (data: { email: string; password: string; username?: string; full_name?: string; role?: string }) =>
-      apiRequest<UserProfile>('/admin/users', { method: 'POST', body: JSON.stringify(data) }),
+      apiRequest<UserProfile>('/admin/users', { method: 'POST', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       toast.success('User created successfully');
@@ -32,7 +32,7 @@ export function useUpdateUser() {
 
   return useMutation({
     mutationFn: ({ id, ...data }: { id: string; username?: string; full_name?: string; role?: string; is_active?: boolean }) =>
-      apiRequest<UserProfile>(`/admin/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+      apiRequest<UserProfile>(`/admin/users/${id}`, { method: 'PUT', data }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       toast.success('User updated successfully');

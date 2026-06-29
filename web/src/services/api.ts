@@ -1,10 +1,12 @@
+import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios';
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 const TOKEN_KEY = 'monabit-access-token';
 const REFRESH_KEY = 'monabit-refresh-token';
 const EXPIRES_KEY = 'monabit-expires-at';
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
@@ -34,70 +36,80 @@ export function getRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_KEY);
 }
 
-export async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
-  const token = getToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers,
-  };
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (err: Error) => void;
+}> = [];
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
+function processQueue(error: Error | null, token?: string) {
+  failedQueue.forEach((p) => {
+    if (error) p.reject(error);
+    else if (token) p.resolve(token);
   });
+  failedQueue = [];
+}
 
-  if (response.status === 401 && token) {
-    const refreshed = await attemptTokenRefresh();
-    if (refreshed) {
-      const newToken = getToken();
-      const retryHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${newToken}`,
-        ...options.headers,
-      };
-      const retryResponse = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: retryHeaders,
-      });
-      if (!retryResponse.ok) {
-        const error = await retryResponse.json().catch(() => ({}));
-        throw new ApiError(retryResponse.status, error.error || 'Request failed');
+const client: AxiosInstance = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+client.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config as AxiosRequestConfig & { _retry?: boolean };
+
+    if (error.response?.status === 401 && !original._retry) {
+      if (isRefreshing) {
+        return new Promise<string>((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then((token) => {
+          original.headers = { ...original.headers, Authorization: `Bearer ${token}` };
+          return client(original);
+        });
       }
-      return retryResponse.json();
+
+      original._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = getRefreshToken();
+        if (!refreshToken) throw new Error('No refresh token');
+
+        const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
+          refresh_token: refreshToken,
+        });
+
+        setTokens(data.access_token, data.refresh_token, data.expires_at);
+        processQueue(null, data.access_token);
+
+        original.headers = { ...original.headers, Authorization: `Bearer ${data.access_token}` };
+        return client(original);
+      } catch {
+        processQueue(new Error('Refresh failed'));
+        clearTokens();
+        window.location.href = '/login';
+        throw new ApiError(401, 'Session expired');
+      } finally {
+        isRefreshing = false;
+      }
     }
-    clearTokens();
-    window.location.href = '/login';
-    throw new ApiError(401, 'Session expired');
-  }
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, error.error || 'Request failed');
-  }
+    const message = error.response?.data?.error || error.message || 'Request failed';
+    throw new ApiError(error.response?.status || 500, message);
+  },
+);
 
-  return response.json();
+export async function apiRequest<T>(path: string, options: AxiosRequestConfig = {}): Promise<T> {
+  const response = await client({ url: path, ...options });
+  return response.data as T;
 }
-
-async function attemptTokenRefresh(): Promise<boolean> {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-  try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-    if (!response.ok) return false;
-    const data = await response.json();
-    setTokens(data.access_token, data.refresh_token, data.expires_at);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export { ApiError };

@@ -44,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const data = await apiRequest<{ user: UserProfile; session: { access_token: string; refresh_token: string; expires_at: number } }>(
       '/auth/login',
-      { method: 'POST', body: JSON.stringify({ email, password }) },
+      { method: 'POST', data: { email, password } },
     );
     setTokens(data.session.access_token, data.session.refresh_token, data.session.expires_at);
     setUser(data.user);
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (email: string, password: string, username?: string, full_name?: string) => {
     const data = await apiRequest<{ user: UserProfile; session: { access_token: string; refresh_token: string; expires_at: number } }>(
       '/auth/register',
-      { method: 'POST', body: JSON.stringify({ email, password, username, full_name }) },
+      { method: 'POST', data: { email, password, username, full_name } },
     );
     setTokens(data.session.access_token, data.session.refresh_token, data.session.expires_at);
     setUser(data.user);
