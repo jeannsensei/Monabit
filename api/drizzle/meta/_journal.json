@@ -8,6 +8,13 @@
       "when": 1782672369494,
       "tag": "0000_melted_shooting_star",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1782672400000,
+      "tag": "0001_triggers_and_rls",
+      "breakpoints": true
     }
   ]
 }
