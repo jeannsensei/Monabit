@@ -1,4 +1,4 @@
-import { sql, eq } from 'drizzle-orm';
+import { count, eq } from 'drizzle-orm';
 import type { Request, Response, NextFunction } from 'express';
 import { supabase } from '@/config/supabase';
 import { db } from '@/db';
@@ -42,7 +42,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     logger.info({ userId: authData.user.id }, 'Profile not found — creating on the fly');
 
     const [{ count: total }] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(profiles);
     const isFirst = total === 0;
 
@@ -56,9 +56,9 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     profile = await userRepository.findById(authData.user.id);
   } else if (profile.role !== 'admin') {
     const [{ count: total }] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: count() })
       .from(profiles)
-      .where(sql`role = 'admin'`);
+      .where(eq(profiles.role, 'admin'));
     if (total === 0) {
       await db
         .update(profiles)
