@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
+import { apiRequest } from '@/services/api';
+import type { UserProfile } from '@/types';
 import { Loader2 } from 'lucide-react';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 export function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -23,15 +23,10 @@ export function AuthCallbackPage() {
       const token = localStorage.getItem('monabit-access-token');
       if (token) {
         try {
-          const res = await fetch(`${API}/auth/me`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (res.ok) {
-            const user = await res.json();
-            useAuthStore.setState({ user, isLoading: false, initialized: true });
-            navigate('/', { replace: true });
-            return;
-          }
+          const user = await apiRequest<UserProfile>('/auth/me');
+          useAuthStore.setState({ user, isLoading: false, initialized: true });
+          navigate('/', { replace: true });
+          return;
         } catch {}
       }
       navigate('/login', { replace: true });

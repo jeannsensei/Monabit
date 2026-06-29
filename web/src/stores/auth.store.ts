@@ -28,16 +28,13 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       return;
     }
     try {
-      const API = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
-      const res = await fetch(`${API}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await apiRequest<UserProfile>('/auth/me');
       set({ user: data, isLoading: false, initialized: true });
     } catch (err) {
       console.error('[auth] initialize failed:', err);
-      clearTokens();
+      if (!localStorage.getItem('monabit-access-token')) {
+        clearTokens();
+      }
       set({ user: null, isLoading: false, initialized: true });
     }
   },
@@ -54,7 +51,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   loginWithGoogle: async () => {
     const { data: authData, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin + '/auth/callback' },
+      options: {
+        redirectTo: window.location.origin + '/auth/callback',
+        queryParams: { prompt: 'select_account' },
+      },
     });
     if (error) throw new Error(error.message);
     if (authData?.url) {

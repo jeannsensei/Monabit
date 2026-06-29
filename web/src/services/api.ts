@@ -60,6 +60,10 @@ client.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  const method = (config.method ?? '').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !config.headers['X-Idempotency-Key']) {
+    config.headers['X-Idempotency-Key'] = crypto.randomUUID();
+  }
   return config;
 });
 
@@ -83,7 +87,10 @@ client.interceptors.response.use(
 
       try {
         const refreshToken = getRefreshToken();
-        if (!refreshToken) throw new Error('No refresh token');
+        if (!refreshToken) {
+          console.warn('[auth] no refresh token available');
+          throw new Error('No refresh token');
+        }
 
         const { data } = await axios.post(`${API_BASE}/auth/refresh`, {
           refresh_token: refreshToken,
@@ -94,7 +101,8 @@ client.interceptors.response.use(
 
         original.headers = { ...original.headers, Authorization: `Bearer ${data.access_token}` };
         return client(original);
-      } catch {
+      } catch (err) {
+        console.error('[auth] refresh failed:', err);
         processQueue(new Error('Refresh failed'));
         clearTokens();
         window.location.href = '/login';
