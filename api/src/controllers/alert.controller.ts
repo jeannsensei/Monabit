@@ -42,10 +42,28 @@ export const alertController = {
     }
   },
 
+  async update(req: Request, res: Response, next: NextFunction) {
+    try {
+      const body = z.object({
+        target_price: z.number().positive().optional(),
+        direction: z.enum(['above', 'below']).optional(),
+      }).parse(req.body);
+
+      const alert = await alertService.update(req.user.id, String(req.params.id), body);
+      if (!alert) {
+        res.status(404).json({ error: 'Alert not found' });
+        return;
+      }
+      res.json(alert);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async check(req: Request, res: Response, next: NextFunction) {
     try {
-      const triggered = await alertService.checkAndTrigger(req.user.id);
-      res.json({ triggered });
+      const result = await alertService.checkAndTrigger(req.user.id);
+      res.json(result);
     } catch (error) {
       next(error);
     }

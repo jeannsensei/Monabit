@@ -55,29 +55,53 @@ export const alertService = {
     return result.count > 0;
   },
 
-  async checkAndTrigger(userId: string): Promise<string[]> {
+  async update(userId: string, alertId: string, data: {
+    target_price?: number;
+    direction?: 'above' | 'below';
+  }): Promise<PriceAlert | null> {
+    const updateData: Record<string, unknown> = {};
+    if (data.target_price !== undefined) updateData.targetPrice = String(data.target_price);
+    if (data.direction !== undefined) updateData.direction = data.direction;
+    updateData.isTriggered = false;
+    updateData.triggeredAt = null;
+
+    const [row] = await db
+      .update(priceAlerts)
+      .set(updateData)
+      .where(and(eq(priceAlerts.id, alertId), eq(priceAlerts.userId, userId)))
+      .returning();
+
+    return row ? mapAlert(row) : null;
+  },
+
+  async checkAndTrigger(userId: string): Promise<{ triggered: string[]; rearmed: string[] }> {
     const active = await db
       .select()
       .from(priceAlerts)
-      .where(and(eq(priceAlerts.userId, userId), eq(priceAlerts.isActive, true), eq(priceAlerts.isTriggered, false)));
+      .where(and(eq(priceAlerts.userId, userId), eq(priceAlerts.isActive, true)));
 
-    if (active.length === 0) return [];
+    if (active.length === 0) return { triggered: [], rearmed: [] };
 
     const coinIds = [...new Set(active.map((a) => a.coinId))];
     const prices = await coingeckoService.getCoinsByIds(coinIds) as Array<{ id: string; current_price: number }>;
     const priceMap = new Map(prices.map((c) => [c.id, c.current_price]));
 
     const triggeredIds: string[] = [];
+    const rearmedIds: string[] = [];
 
     for (const alert of active) {
       const current = priceMap.get(alert.coinId);
       if (current === undefined) continue;
 
       const target = Number(alert.targetPrice);
-      const triggered = alert.direction === 'above' ? current >= target : current <= target;
+      const margin = target * 0.01;
 
-      if (triggered) {
-        triggeredIds.push(alert.id);
+      if (!alert.isTriggered) {
+        const shouldTrigger = alert.direction === 'above' ? current >= target : current <= target;
+        if (shouldTrigger) triggeredIds.push(alert.id);
+      } else {
+        const shouldRearm = alert.direction === 'above' ? current <= target - margin : current >= target + margin;
+        if (shouldRearm) rearmedIds.push(alert.id);
       }
     }
 
@@ -88,7 +112,14 @@ export const alertService = {
         .where(inArray(priceAlerts.id, triggeredIds));
     }
 
-    logger.info({ userId, triggered: triggeredIds.length }, 'Price alerts checked');
-    return triggeredIds;
+    if (rearmedIds.length > 0) {
+      await db
+        .update(priceAlerts)
+        .set({ isTriggered: false, triggeredAt: null })
+        .where(inArray(priceAlerts.id, rearmedIds));
+    }
+
+    logger.info({ userId, triggered: triggeredIds.length, rearmed: rearmedIds.length }, 'Price alerts checked');
+    return { triggered: triggeredIds, rearmed: rearmedIds };
   },
 };

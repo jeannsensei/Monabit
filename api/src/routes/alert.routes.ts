@@ -10,6 +10,7 @@ router.use(asyncHandler(authMiddleware));
 router.get('/', asyncHandler(alertController.list));
 router.post('/', asyncHandler(alertController.create));
 router.post('/check', asyncHandler(alertController.check));
+router.put('/:id', asyncHandler(alertController.update));
 router.delete('/:id', asyncHandler(alertController.remove));
 
 export { router as alertRoutes };
