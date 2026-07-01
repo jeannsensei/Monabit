@@ -34,7 +34,8 @@ export function LoginForm({ onSubmit, loading, error }: LoginFormProps) {
   const fieldError = (key: string) => {
     const msg = errors[key as keyof typeof errors]?.message;
     if (!msg) return undefined;
-    return t(msg as string, { defaultValue: msg as string });
+    const translated = t(`auth.${msg}`, { defaultValue: '' });
+    return translated || t(msg, { defaultValue: msg });
   };
 
   return (
