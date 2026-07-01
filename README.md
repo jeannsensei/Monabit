@@ -2,6 +2,9 @@
 
 A full-stack cryptocurrency market dashboard built with React, Express, TypeScript, and Supabase. Deployed on Google Cloud Run.
 
+- **Frontend:** https://monabit-web-133087156906.us-central1.run.app
+- **Backend:**  https://monabit-api-133087156906.us-central1.run.app
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -37,17 +40,19 @@ cp web/.env.example web/.env
 # SUPABASE_URL=https://your-project.supabase.co
 # SUPABASE_ANON_KEY=eyJ...
 # SUPABASE_SERVICE_ROLE_KEY=eyJ...
+# DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres
+# COINGECKO_API_KEY=CG-...
 
 # 4. Fill in web/.env
 # VITE_SUPABASE_URL=https://your-project.supabase.co
 # VITE_SUPABASE_ANON_KEY=eyJ...
 # VITE_API_URL=http://localhost:8080/api
 
-# 5. Run Supabase migrations
-supabase db push
-
-# 6. Install dependencies
+# 5. Install dependencies
 make install
+
+# 6. Run database migrations
+cd api && npm run db:migrate
 
 # 7. Start both services
 make dev
@@ -57,195 +62,57 @@ The API runs on `http://localhost:8080`, the frontend on `http://localhost:5173`
 
 ## Environment Variables
 
-### Backend (`api/.env.example`)
+### Backend
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `NODE_ENV` | Environment | `development` |
-| `PORT` | Server port | `8080` |
-| `SUPABASE_URL` | Supabase project URL | `https://xxx.supabase.co` |
-| `SUPABASE_ANON_KEY` | Supabase anon key | `eyJ...` |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) | `eyJ...` |
-| `COINGECKO_API_URL` | CoinGecko API base | `https://api.coingecko.com/api/v3` |
-| `COINGECKO_API_KEY` | Optional — for higher rate limits | `CG-...` |
-| `CORS_ORIGIN` | Frontend origin | `http://localhost:5173` |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window | `900000` (15 min) |
-| `RATE_LIMIT_MAX` | Max requests per window | `100` |
-| `LOG_LEVEL` | Logging level | `info` |
+See `api/.env.example` and `api/api-env.yaml.example` for all variables.
 
-### Frontend (`web/.env.example`)
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `SUPABASE_URL` | Yes | Supabase project URL |
+| `SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (server only) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string (for Drizzle) |
+| `COINGECKO_API_KEY` | No | Free CoinGecko API key |
+| `CORS_ORIGIN` | No | Frontend origin (default: `http://localhost:5173`) |
+| `NODE_ENV` | No | `development` / `production` / `test` |
+| `PORT` | No | Server port (default: 8080) |
+| `LOG_LEVEL` | No | `info` / `debug` / `trace` / `warn` / `error` |
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
-| `VITE_API_URL` | Backend API URL |
+### Frontend
+
+See `web/.env.example`.
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_SUPABASE_URL` | Yes | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `VITE_API_URL` | Yes | Backend API URL |
 
 ## Architecture
 
-### High-Level
-
-```
-Browser → Cloud Run Frontend (nginx + React SPA)
-              │
-              ▼
-         Cloud Run Backend (Express + TypeScript)
-              │
-         ┌────┴────┐
-         ▼         ▼
-     Supabase    CoinGecko
-   (Auth + DB)    (Crypto Data)
-```
-
-### Backend Layers
-
-Every request flows through: **Routes → Controllers → Services → Repositories → Supabase**.
-
-- **Routes**: Define endpoints and middleware chains. No logic.
-- **Controllers**: Handle HTTP concerns (parsing, status codes). No business logic.
-- **Services**: Business logic and orchestration (cache check → API call → transform → store).
-- **Repositories**: Data access layer using Drizzle ORM with type-safe PostgreSQL queries. Schema defined in code, migrations auto-generated via `drizzle-kit`.
-- **Supabase Auth**: Handles all authentication (email/password, Google OAuth, JWT). Separate from the data layer.
-
-This separation means services are testable without HTTP mocking, and switching databases only touches repositories.
-
-### Frontend State Management
-
-- **TanStack Query**: All server state (crypto data, user lists, favorites). Automatic caching, background refetch, stale-while-revalidate.
-- **Zustand**: Client-only UI state (theme, sidebar toggle). Persisted to localStorage.
-- **React Router v6**: SPA routing with auth guards and role-based access control.
-
-## Database Model
-
-### Tables
-
-| Table | Purpose | Key Relationships |
-|-------|---------|-------------------|
-| `profiles` | Extends Supabase `auth.users` with display name, role, preferences | 1:1 with `auth.users` |
-| `favorites` | User's bookmarked cryptocurrencies | N:1 to `profiles` |
-| `price_alerts` | Price threshold alerts per user | N:1 to `profiles` |
-| `audit_logs` | Admin action tracking (who did what) | N:1 to `profiles` |
-
-### Design Decisions
-
-- `profiles` is separate from `auth.users` for separation of concerns: Supabase handles auth, we handle application data.
-- `role` is a CHECK-constrained TEXT field (`'admin'` or `'user'`), avoiding an enum for flexibility.
-- `audit_logs` stores old/new values as JSONB for rich change tracking.
-- Row Level Security (RLS) policies enforce access at the database level: users can only read their own data, admins can read everything.
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/auth/register` | No | Register with email/password |
-| POST | `/api/auth/login` | No | Login (returns JWT) |
-| POST | `/api/auth/google` | No | Google OAuth login |
-| POST | `/api/auth/logout` | Yes | Invalidate session |
-| GET | `/api/auth/me` | Yes | Get current user profile |
-
-### Cryptocurrency
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/crypto/top10` | Yes | Top 10 coins by market cap (cached 60s) |
-| GET | `/api/crypto/market-overview` | Yes | Global KPIs (total mcap, volume, dominance) |
-| GET | `/api/crypto/:coinId` | Yes | Single coin detail |
-| GET | `/api/crypto/:coinId/history` | Yes | Price history for charts |
-| GET | `/api/crypto/search?q=` | Yes | Search coins |
-
-### Admin (role: admin)
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/admin/users` | List all users (paginated) |
-| GET | `/api/admin/users/:id` | Get single user |
-| POST | `/api/admin/users` | Create user |
-| PUT | `/api/admin/users/:id` | Update user (role, active status) |
-| DELETE | `/api/admin/users/:id` | Soft-delete (deactivate) |
-
-### Profile & Favorites
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/profile` | Get own profile |
-| PUT | `/api/profile` | Update profile |
-| GET | `/api/favorites` | List favorites |
-| POST | `/api/favorites` | Add to favorites |
-| DELETE | `/api/favorites/:coinId` | Remove favorite |
-
-### System
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check (DB, cache status) |
-
-## CoinGecko Integration
-
-I chose **CoinGecko** because its free tier requires a free API key (no payment needed) and provides comprehensive market data (top coins, global KPIs, historical charts, search) via a RESTful API.
-
-### Caching Strategy
-
-To avoid hitting CoinGecko's rate limits (10-30 req/min on free tier):
-
-- **In-memory TTL cache** (`node-cache`): 60s for market data, 120s for global data, 300s for historical data.
-- **Background scheduler** (`node-cron`): Pre-fetches top 10 and global data every 55 seconds.
-- **Result**: At most 1.09 CoinGecko calls per minute. 99% of user requests hit the cache.
-
-### Reliability
-
-- **Exponential backoff retry**: 3 attempts with increasing delay on 429/5xx errors.
-- **Graceful degradation**: If CoinGecko is down, stale cached data is returned with a warning.
-- **Scheduler isolation**: Cache refresh failures don't affect user requests.
-
-## Price Alerts
-
-Users can set price alerts on any cryptocurrency. When a coin's price crosses the target threshold (above or below), the alert is marked as triggered.
-
-### How It Works
-
-1. **Creating an alert**: From the Alerts page in the sidebar, search for a coin, set a target price, and choose direction (above/below).
-2. **Storage**: Alerts are persisted in the `price_alerts` PostgreSQL table with the user's ID, coin ID, target price, and direction.
-3. **Checking**: A background job in the backend periodically checks active alerts against current CoinGecko prices. When triggered, the alert's `is_triggered` flag is set to `true`.
-4. **API**: `GET/POST/DELETE /api/alerts` — standard CRUD behind auth middleware.
-
-### Endpoints
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/alerts` | Yes | List user's price alerts |
-| POST | `/api/alerts` | Yes | Create an alert (coin_id, coin_symbol, target_price, direction) |
-| DELETE | `/api/alerts/:id` | Yes | Remove an alert |
-
-## Authentication & Security
-
-### Authentication Flow
-
-1. User registers or logs in via email/password (or Google OAuth).
-2. Supabase Auth validates credentials and returns a JWT.
-3. JWT is stored in `localStorage` and sent as `Authorization: Bearer <token>` on every API request.
-4. Backend `auth.middleware.ts` validates the JWT with Supabase and attaches the user profile to `req.user`.
-5. `admin.middleware.ts` checks `req.user.role === 'admin'` for admin-only routes.
-
-### Security Measures
-
-| Layer | Implementation |
-|-------|---------------|
-| **Authentication** | Supabase JWT, 1-hour expiry, refresh tokens |
-| **Authorization** | Role-based (admin/user), enforced at middleware and RLS |
-| **Row Level Security** | PostgreSQL RLS policies prevent unauthorized data access at DB level |
-| **Input validation** | Zod schemas on all request bodies, queries, and params |
-| **Rate limiting** | Auth: 10 req/15min per IP. General: 100 req/15min per IP. |
-| **HTTP headers** | Helmet (CSP, X-Frame-Options, HSTS, etc.) |
-| **CORS** | Whitelist frontend origin only |
-| **Idempotency** | `X-Idempotency-Key` header prevents duplicate mutations |
-| **Secrets** | `.env` in `.gitignore`, `.env.example` with placeholders |
-| **Dependencies** | `npm audit` in CI pipeline |
+See [`README_ARCHITECTURE-EN.md`](./README_ARCHITECTURE-EN.md) for the full architecture documentation covering backend layers, frontend state management, database model, API endpoints, CoinGecko integration, security, and technology decisions.
 
 ## Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment instructions, environment variables, Google Cloud Run setup, and CI/CD pipeline details.
+See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for Google Cloud Run deployment instructions.
+
+### Deploy Scripts
+
+```bash
+# 1. Create env files with real values
+cp api/api-env.yaml.example api/api-env.yaml
+cp web/web-env.yaml.example web/web-env.yaml
+# Edit both files with your credentials
+
+# 2. Deploy both services
+./gcloud-deploy.sh
+
+# Or individually:
+cd api && ./gcloud-deploy.sh
+cd web && ./gcloud-deploy.sh
+```
+
+The deploy scripts automatically find the gcloud SDK and reference `api-env.yaml` / `web-env.yaml` (both in `.gitignore`) to pass environment variables at deploy time without hardcoding secrets.
 
 ## AI Tools Usage
 
@@ -275,18 +142,9 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for deployment instructions, environment va
 - **In-memory cache**: Cache is lost on instance restart. Acceptable for 60s TTL; Redis would be needed for multi-instance deployments.
 - **Cloud Run cold starts**: ~2s delay when scaling from 0. Mitigated by `min-instances: 1` if needed (~$40/month).
 - **No WebSocket real-time updates**: Dashboard polls every 60s. Sufficient for most use cases but not truly real-time.
-- **JWT in localStorage**: Susceptible to XSS (mitigated by CSP + React escaping). BFF pattern would be needed for HttpOnly cookie sessions in production.
-
-## Future Improvements
-
-- Redis for shared caching across multiple Cloud Run instances
-- WebSocket integration for real-time price updates (Binance WebSocket or Supabase Realtime)
-- End-to-end tests with Playwright
-- Email notifications for price alerts
-- OpenAPI/Swagger documentation generated from Zod schemas
-- Feature flags for controlled rollouts
-- Error tracking with Sentry
+- **JWT in localStorage**: Susceptible to XSS (mitigated by CSP + React escaping). BBF pattern would be needed for HttpOnly cookie sessions in production.
 
 ## License
 
 This project was built as a technical challenge.
+

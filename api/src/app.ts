@@ -8,8 +8,6 @@ import { errorMiddleware } from '@/middlewares/error.middleware';
 import { requestIdMiddleware } from '@/middlewares/request-id.middleware';
 import { generalLimiter } from '@/middlewares/rate-limit.middleware';
 import { idempotencyMiddleware } from '@/middlewares/idempotency.middleware';
-import { authMiddleware } from '@/middlewares/auth.middleware';
-import { supabase } from '@/config/supabase';
 import { db } from '@/db';
 import { profiles } from '@/db/schema';
 import { cacheService } from '@/services/cache.service';

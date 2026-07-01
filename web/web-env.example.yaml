@@ -1,0 +1,16 @@
+# ============================================================
+# MonaBit — Frontend deploy variables (example)
+# Copy to web-env.yaml and fill with real values
+# These are passed via --env-vars-file during gcloud deploy
+# ============================================================
+
+# Supabase project URL. Same as backend SUPABASE_URL.
+VITE_SUPABASE_URL: "https://YOUR_PROJECT.supabase.co"
+
+# Supabase anon/public key. Same as backend SUPABASE_ANON_KEY.
+# Safe for client-side use (respects RLS).
+VITE_SUPABASE_ANON_KEY: "eyJ..."
+
+# Backend API URL. Points to the deployed Express server.
+# Format: https://monabit-api-XXXX-uc.a.run.app/api
+VITE_API_URL: "https://monabit-api-XXXX-uc.a.run.app/api"
