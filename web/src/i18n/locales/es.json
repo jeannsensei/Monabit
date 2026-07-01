@@ -49,6 +49,7 @@
     "passwordReset": "Contraseña actualizada",
     "passwordResetSuccess": "Ahora puedes iniciar sesión con tu nueva contraseña",
     "resetPassword": "Restablecer contraseña",
+    "registeredSuccess": "Cuenta creada. Ahora puedes iniciar sesión.",
     "accountDeactivated": "Tu cuenta ha sido desactivada. Contacta a un administrador."
   },
   "dashboard": {
@@ -130,12 +131,17 @@
     "failedToLoad": "Error al cargar usuarios.",
     "userCreated": "Usuario creado correctamente",
     "userUpdated": "Usuario actualizado correctamente",
+    "userActivated": "Usuario activado",
     "userDeactivated": "Usuario desactivado",
+    "userHardDeleted": "Usuario eliminado permanentemente",
     "createFailed": "Error al crear usuario",
     "updateFailed": "Error al actualizar usuario",
     "tooltipEdit": "Editar usuario",
     "tooltipDeactivate": "Desactivar usuario",
     "tooltipActivate": "Activar usuario",
+    "tooltipDelete": "Eliminar permanentemente",
+    "deletePermanently": "Eliminar permanentemente",
+    "deletePermanentlyConfirm": "Esto eliminará permanentemente a {{name}} de la base de datos y Supabase Auth. Esta acción no se puede deshacer.",
     "pageInfo": "Página {{page}} de {{totalPages}} ({{total}} usuarios)",
     "previous": "Anterior",
     "next": "Siguiente"

@@ -49,6 +49,7 @@
     "passwordReset": "Password reset successful",
     "passwordResetSuccess": "You can now log in with your new password",
     "resetPassword": "Reset Password",
+    "registeredSuccess": "Account created. You can now log in.",
     "accountDeactivated": "Your account has been deactivated. Contact an administrator."
   },
   "dashboard": {
@@ -130,12 +131,17 @@
     "failedToLoad": "Failed to load users.",
     "userCreated": "User created successfully",
     "userUpdated": "User updated successfully",
+    "userActivated": "User activated",
     "userDeactivated": "User deactivated",
+    "userHardDeleted": "User permanently deleted",
     "createFailed": "Failed to create user",
     "updateFailed": "Failed to update user",
     "tooltipEdit": "Edit user",
     "tooltipDeactivate": "Deactivate user",
     "tooltipActivate": "Activate user",
+    "tooltipDelete": "Delete permanently",
+    "deletePermanently": "Delete permanently",
+    "deletePermanentlyConfirm": "This will permanently delete {{name}} from the database and Supabase Auth. This cannot be undone.",
     "pageInfo": "Page {{page}} of {{totalPages}} ({{total}} users)",
     "previous": "Previous",
     "next": "Next"

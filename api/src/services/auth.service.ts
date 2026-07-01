@@ -13,34 +13,48 @@ function attachEmail(profile: UserProfile | null, email: string | undefined) {
 
 export const authService = {
   async register(email: string, password: string, username?: string, full_name?: string) {
-    const { data, error } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { username, full_name },
-    });
-
-    if (error) {
-      logger.error({ error }, 'Failed to register user');
-      if (error.message.includes('already')) {
-        return { error: 'A user with this email already exists' };
-      }
-      return { error: error.message };
-    }
-
-    const profile = await userRepository.findById(data.user.id);
-
-    if (!profile) {
-      await db.insert(profiles).values({
-        id: data.user.id,
-        username: username ?? data.user.email ?? null,
-        fullName: full_name ?? null,
-        role: 'user',
+    try {
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { username, full_name },
       });
-    }
 
-    const p = await userRepository.findById(data.user.id);
-    return { user: attachEmail(p, data.user.email), session: null };
+      if (error) {
+        logger.error({ error, fullError: JSON.stringify(error) }, 'Failed to register user');
+        const msg = typeof error.message === 'string' ? error.message : JSON.stringify(error);
+        if (msg.includes('already')) {
+          return { error: 'A user with this email already exists' };
+        }
+        return { error: `Registration error: ${msg}` };
+      }
+
+      if (!data?.user?.id) {
+        logger.error({ data }, 'User creation returned no data');
+        return { error: 'Registration failed — no user data returned' };
+      }
+
+      const profile = await userRepository.findById(data.user.id);
+      if (!profile) {
+        try {
+          await db.insert(profiles).values({
+            id: data.user.id,
+            username: username ?? data.user.email ?? null,
+            fullName: full_name ?? null,
+            role: 'user',
+          });
+        } catch (err) {
+          logger.error({ error: err, userId: data.user.id }, 'Failed to create profile during registration');
+        }
+      }
+
+      const p = await userRepository.findById(data.user.id);
+      return { user: attachEmail(p, data.user.email), session: null };
+    } catch (err) {
+      logger.error({ error: err }, 'Unexpected error in register');
+      return { error: 'An unexpected error occurred during registration' };
+    }
   },
 
   async login(email: string, password: string) {

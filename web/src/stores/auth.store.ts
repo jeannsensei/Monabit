@@ -65,9 +65,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   register: async (email, password, username, full_name) => {
     const data = await apiRequest<{
       user: UserProfile;
-      session: { access_token: string; refresh_token: string; expires_at: number };
+      session: { access_token: string; refresh_token: string; expires_at: number } | null;
     }>('/auth/register', { method: 'POST', data: { email, password, username, full_name } });
-    setTokens(data.session.access_token, data.session.refresh_token, data.session.expires_at);
+    if (data.session) {
+      setTokens(data.session.access_token, data.session.refresh_token, data.session.expires_at);
+    }
     set({ user: data.user });
   },
 
