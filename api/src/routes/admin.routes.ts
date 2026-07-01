@@ -14,5 +14,6 @@ router.post('/users', asyncHandler(adminController.createUser));
 router.put('/users/:id', asyncHandler(adminController.updateUser));
 router.post('/users/:id/reset-password', asyncHandler(adminController.resetPassword));
 router.delete('/users/:id', asyncHandler(adminController.deleteUser));
+router.delete('/users/:id/hard', asyncHandler(adminController.hardDeleteUser));
 
 export { router as adminRoutes };

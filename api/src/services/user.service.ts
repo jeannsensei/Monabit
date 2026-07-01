@@ -1,6 +1,9 @@
 import { userRepository, auditRepository } from '@/repositories';
 import { authService } from '@/services/auth.service';
 import { supabase } from '@/config/supabase';
+import { db } from '@/db';
+import { profiles } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { NotFoundError, ConflictError, ForbiddenError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { UserProfile } from '@/types';
@@ -20,7 +23,33 @@ export const userService = {
   async create(adminId: string, data: { email: string; password: string; username?: string; full_name?: string; role?: string }, ip: string) {
     const { data: authUsers } = await supabase.auth.admin.listUsers();
     const existing = authUsers?.users?.find((u) => u.email === data.email);
-    if (existing) throw new ConflictError('A user with this email already exists');
+
+    if (existing) {
+      // Check if the existing user has a profile — if not, create it (zombie recovery)
+      const profile = await userRepository.findById(existing.id);
+      if (!profile) {
+        await db.insert(profiles).values({
+          id: existing.id,
+          username: data.username ?? existing.email ?? null,
+          fullName: data.full_name ?? null,
+          role: data.role === 'admin' ? 'admin' : 'user',
+        });
+
+        const p = await userRepository.findById(existing.id);
+        if (p) {
+          await auditRepository.create({
+            user_id: adminId,
+            action: 'user.create',
+            resource: 'user',
+            resource_id: existing.id,
+            details: { email: data.email, role: data.role ?? 'user', note: 'recovered zombie user' },
+            ip_address: ip,
+          });
+          return p;
+        }
+      }
+      throw new ConflictError('A user with this email already exists');
+    }
 
     const result = await authService.register(data.email, data.password, data.username, data.full_name);
     if (result.error || !result.user) {
@@ -50,7 +79,7 @@ export const userService = {
     const user = await userRepository.findById(targetId);
     if (!user) throw new NotFoundError('User');
 
-    if (adminId === targetId && data.role !== undefined) {
+    if (adminId === targetId && data.role !== undefined && data.role !== user.role) {
       throw new ForbiddenError('Cannot change your own role');
     }
 
@@ -79,18 +108,52 @@ export const userService = {
     const user = await userRepository.findById(targetId);
     if (!user) throw new NotFoundError('User');
 
-    const updated = await userRepository.update(targetId, { is_active: false });
+    const newStatus = !user.is_active;
+    const updated = await userRepository.update(targetId, { is_active: newStatus });
 
     await auditRepository.create({
       user_id: adminId,
-      action: 'user.delete',
+      action: newStatus ? 'user.activate' : 'user.deactivate',
       resource: 'user',
       resource_id: targetId,
-      details: { deactivated_email: user.email },
+      details: { email: user.email, was_active: user.is_active, now_active: newStatus },
       ip_address: ip,
     });
 
-    logger.info({ adminId, targetId }, 'Admin deactivated user');
+    logger.info({ adminId, targetId, nowActive: newStatus }, 'Admin toggled user status');
     return updated;
+  },
+
+  async hardDelete(adminId: string, targetId: string, ip: string) {
+    if (adminId === targetId) {
+      throw new ForbiddenError('Cannot delete your own account');
+    }
+
+    const user = await userRepository.findById(targetId);
+    if (!user) throw new NotFoundError('User');
+    if (user.is_active) {
+      throw new ForbiddenError('Deactivate the user before deleting permanently');
+    }
+
+    // Delete from Drizzle first
+    await db.delete(profiles).where(eq(profiles.id, targetId));
+
+    // Delete from Supabase Auth
+    const { error } = await supabase.auth.admin.deleteUser(targetId);
+    if (error) {
+      logger.error({ error }, 'Failed to delete user from Supabase Auth');
+    }
+
+    await auditRepository.create({
+      user_id: adminId,
+      action: 'user.hard_delete',
+      resource: 'user',
+      resource_id: targetId,
+      details: { email: user.email },
+      ip_address: ip,
+    });
+
+    logger.info({ adminId, targetId }, 'Admin permanently deleted user');
+    return { message: 'User permanently deleted' };
   },
 };

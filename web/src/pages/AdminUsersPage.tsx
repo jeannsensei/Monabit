@@ -3,18 +3,18 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useResetPassword } from '@/hooks/useUsers';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useHardDeleteUser, useResetPassword } from '@/hooks/useUsers';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Modal } from '@/components/ui/modal';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Select, SelectItem } from '@/components/ui/select';
-import { Plus, Pencil, Ban, CheckCircle, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Ban, CheckCircle, Trash2, Loader2 } from 'lucide-react';
 import type { UserProfile } from '@/types';
 
 const createUserSchema = z.object({
   email: z.string().email('Invalid email'),
-  password: z.string().min(8, 'At least 8 characters'),
+  password: z.string().min(8, 'auth.passwordMin8'),
   username: z.string().optional(),
   full_name: z.string().optional(),
   role: z.enum(['admin', 'user']),
@@ -36,9 +36,11 @@ export function AdminUsersPage() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const hardDeleteUser = useHardDeleteUser();
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+  const [deletingPermanently, setDeletingPermanently] = useState<UserProfile | null>(null);
 
   return (
     <div className="space-y-6">
@@ -104,6 +106,13 @@ export function AdminUsersPage() {
                             {user.is_active ? <Ban size={14} /> : <CheckCircle size={14} />}
                           </button>
                         </Tooltip>
+                        {!user.is_active && (
+                          <Tooltip content={t('admin.tooltipDelete')}>
+                            <button onClick={() => setDeletingPermanently(user)} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                              <Trash2 size={14} />
+                            </button>
+                          </Tooltip>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -143,8 +152,21 @@ export function AdminUsersPage() {
             ? t('admin.deactivateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })
             : t('admin.activateConfirm', { name: deletingUser.full_name || deletingUser.username || 'this user' })}
           confirmLabel={deletingUser.is_active ? t('admin.deactivate') : t('admin.activate')}
+          variant={deletingUser.is_active ? 'destructive' : 'default'}
           onConfirm={() => { deleteUser.mutate(deletingUser.id); setDeletingUser(null); }}
           onCancel={() => setDeletingUser(null)}
+        />
+      )}
+
+      {deletingPermanently && (
+        <ConfirmDialog
+          open
+          title={t('admin.deletePermanently')}
+          message={t('admin.deletePermanentlyConfirm', { name: deletingPermanently.full_name || deletingPermanently.username || 'this user' })}
+          confirmLabel={t('admin.deletePermanently')}
+          variant="destructive"
+          onConfirm={() => { hardDeleteUser.mutate(deletingPermanently.id); setDeletingPermanently(null); }}
+          onCancel={() => setDeletingPermanently(null)}
         />
       )}
     </div>
@@ -167,7 +189,7 @@ function CreateUserForm({ loading, onSubmit, onCancel }: { loading: boolean; onS
         <div>
           <label className="block text-sm font-medium">{t('auth.password')}</label>
           <input type="password" disabled={loading} className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50" {...register('password')} />
-          {errors.password && <p className="mt-1 text-xs text-destructive">{errors.password.message}</p>}
+          {errors.password && <p className="mt-1 text-xs text-destructive">{t(errors.password.message || '')}</p>}
         </div>
         <div>
           <label className="block text-sm font-medium">{t('auth.username')}</label>

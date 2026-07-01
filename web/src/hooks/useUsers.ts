@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/services/api';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import type { UserProfile, PaginatedResponse } from '@/types';
 
 export function useUsers(page = 1, perPage = 20) {
@@ -45,13 +46,32 @@ export function useUpdateUser() {
 
 export function useDeleteUser() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   return useMutation({
     mutationFn: (id: string) =>
-      apiRequest<{ message: string }>(`/admin/users/${id}`, { method: 'DELETE' }),
+      apiRequest<{ message: string; user: UserProfile }>(`/admin/users/${id}`, { method: 'DELETE' }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      const key = data.message === 'activated' ? 'admin.userActivated' : 'admin.userDeactivated';
+      toast.success(t(key));
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+}
+
+export function useHardDeleteUser() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+
+  return useMutation({
+    mutationFn: (id: string) =>
+      apiRequest<{ message: string }>(`/admin/users/${id}/hard`, { method: 'DELETE' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-      toast.success('User deactivated');
+      toast.success(t('admin.userHardDeleted'));
     },
     onError: (error: Error) => {
       toast.error(error.message);

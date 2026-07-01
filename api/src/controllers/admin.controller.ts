@@ -63,7 +63,17 @@ export const adminController = {
   async deleteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const user = await userService.deactivate(req.user.id, String(req.params.id), String(req.ip ?? 'unknown'));
-      res.json({ message: 'User deactivated', user });
+      const action = user?.is_active ? 'activated' : 'deactivated';
+      res.json({ message: action, user });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async hardDeleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await userService.hardDelete(req.user.id, String(req.params.id), String(req.ip ?? 'unknown'));
+      res.json(result);
     } catch (error) {
       next(error);
     }
