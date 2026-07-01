@@ -1,4 +1,4 @@
-import { eq, sql, count, and } from 'drizzle-orm';
+import { eq, sql, count, and, inArray } from 'drizzle-orm';
 import { db } from '@/db';
 import { supabase } from '@/config/supabase';
 import { profiles, favorites, auditLogs } from '@/db/schema';
@@ -41,8 +41,14 @@ export const userRepository = {
 
     const profile = mapProfile(row);
     const { data: authUser } = await supabase.auth.admin.getUserById(id);
-    profile.email = authUser?.user?.email;
 
+    if (!authUser?.user) {
+      // Auth user was deleted — clean up orphan profile
+      await db.delete(profiles).where(eq(profiles.id, id));
+      return null;
+    }
+
+    profile.email = authUser.user.email;
     return profile;
   },
 
@@ -63,13 +69,27 @@ export const userRepository = {
     const data = rows.map(mapProfile);
 
     const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const emailMap = new Map(authUsers?.users?.map((u) => [u.id, u.email]) ?? []);
+    // Filter out soft-deleted auth users (those with deleted_at set)
+    const activeUsers = (authUsers?.users ?? []).filter((u) => !('deleted_at' in u && u.deleted_at));
+    const emailMap = new Map(activeUsers.map((u) => [u.id, u.email]) ?? []);
+    const authIds = new Set(activeUsers.map((u) => u.id) ?? []);
 
+    const orphaned: string[] = [];
     for (const profile of data) {
       profile.email = emailMap.get(profile.id);
+      if (!profile.email && !authIds.has(profile.id)) {
+        orphaned.push(profile.id);
+      }
     }
 
-    return { data, total: countResult?.total ?? 0 };
+    // Clean up orphaned profiles (user deleted from Supabase Auth but profile remains)
+    if (orphaned.length > 0) {
+      await db.delete(profiles).where(inArray(profiles.id, orphaned));
+    }
+
+    const validData = data.filter((p) => authIds.has(p.id) && p.email);
+
+    return { data: validData, total: validData.length };
   },
 
   async update(id: string, data: {
