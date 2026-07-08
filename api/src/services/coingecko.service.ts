@@ -1,6 +1,6 @@
 import { env } from '@/config/env';
 import { withRetry } from '@/utils/retry';
-import { CoinGeckoError } from '@/utils/errors';
+import { CoinGeckoError, NoRetryError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 
 const BASE_URL = env.COINGECKO_API_URL;
@@ -25,8 +25,8 @@ async function fetchCoinGecko<T>(path: string, params: Record<string, string> = 
       if (response.status === 429) {
         const retryAfter = response.headers.get('Retry-After');
         const waitMs = retryAfter ? parseInt(retryAfter) * 1000 : 60_000;
-        logger.warn({ status: 429, retryAfter: waitMs }, 'CoinGecko rate limit hit');
-        throw new CoinGeckoError('Rate limit exceeded — retrying after delay');
+        logger.warn({ status: 429, retryAfter: waitMs }, 'CoinGecko rate limit hit — not retrying');
+        throw new NoRetryError('CoinGecko rate limit exceeded');
       }
       if (!response.ok) {
         logger.error({ status: response.status, path }, 'CoinGecko API error');

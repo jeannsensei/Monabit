@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { priceAlerts } from '@/db/schema';
-import { coingeckoService } from '@/services/coingecko.service';
+import { cryptoService } from '@/services/crypto.service';
 import { logger } from '@/utils/logger';
 import type { PriceAlert } from '@/types';
 
@@ -83,7 +83,7 @@ export const alertService = {
     if (active.length === 0) return { triggered: [], rearmed: [] };
 
     const coinIds = [...new Set(active.map((a) => a.coinId))];
-    const prices = await coingeckoService.getCoinsByIds(coinIds) as Array<{ id: string; current_price: number }>;
+    const prices = await cryptoService.getCoinsByIds(coinIds);
     const priceMap = new Map(prices.map((c) => [c.id, c.current_price]));
 
     const triggeredIds: string[] = [];

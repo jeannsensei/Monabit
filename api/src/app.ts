@@ -12,7 +12,6 @@ import { db } from '@/db';
 import { profiles } from '@/db/schema';
 import { cacheService } from '@/services/cache.service';
 import { logger } from '@/utils/logger';
-import { startScheduler } from '@/utils/scheduler';
 
 export function createApp() {
   const app = express();
@@ -88,6 +87,5 @@ export function startServer() {
 
   app.listen(env.PORT, () => {
     logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Monabit API server started');
-    startScheduler();
   });
 }

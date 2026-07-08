@@ -12,6 +12,7 @@ export async function withRetry<T>(
     try {
       return await fn();
     } catch (error) {
+      if (error instanceof Error && error.name === 'NoRetryError') throw error;
       if (attempt === retries) throw error;
 
       const delay = Math.min(

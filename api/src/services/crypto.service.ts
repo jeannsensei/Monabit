@@ -4,7 +4,7 @@ import { logger } from '@/utils/logger';
 import type { CryptoCoin, MarketOverview, PriceHistory } from '@/types';
 
 const CACHE_PREFIX = 'crypto:';
-const CACHE_TTL = 60;
+const CACHE_TTL = 300;
 
 export const cryptoService = {
   async getTop10(): Promise<{ data: CryptoCoin[]; cached: boolean; cached_at?: string; last_api_fetch?: string }> {
@@ -62,7 +62,7 @@ export const cryptoService = {
       last_updated: new Date().toISOString(),
     };
 
-    cacheService.set(cacheKey, overview, 120);
+    cacheService.set(cacheKey, overview, 600);
     return overview;
   },
 
@@ -126,7 +126,7 @@ export const cryptoService = {
     if (cached) return cached;
 
     const response = await coingeckoService.searchCoins(query);
-    cacheService.set(cacheKey, response, 120);
+    cacheService.set(cacheKey, response, 300);
     return response;
   },
 
@@ -156,7 +156,7 @@ export const cryptoService = {
       last_updated: c.last_updated as string,
     }));
 
-    cacheService.set(cacheKey, transformed, 60);
+    cacheService.set(cacheKey, transformed, 300);
     return transformed;
   },
 };

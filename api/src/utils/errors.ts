@@ -43,3 +43,10 @@ export class CoinGeckoError extends AppError {
     super(statusCode, message);
   }
 }
+
+export class NoRetryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NoRetryError';
+  }
+}
