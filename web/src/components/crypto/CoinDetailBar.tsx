@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface CoinDetailBarProps {
   coinId: string;
   isFavorite: boolean;
-  onToggleFavorite: () => void;
+  onToggleFavorite: (coin: { coin_id: string; coin_symbol: string; coin_name: string }) => void;
 }
 
 export function CoinDetailBar({ coinId, isFavorite, onToggleFavorite }: CoinDetailBarProps) {
@@ -39,7 +39,7 @@ export function CoinDetailBar({ coinId, isFavorite, onToggleFavorite }: CoinDeta
             <span className="text-xs text-muted-foreground">#{coin.market_cap_rank}</span>
           </div>
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }} className="ml-1 rounded-md p-1 transition-colors hover:bg-accent">
+        <button onClick={(e) => { e.stopPropagation(); onToggleFavorite({ coin_id: coin.id, coin_symbol: coin.symbol, coin_name: coin.name }); }} className="ml-1 rounded-md p-1 transition-colors hover:bg-accent">
           <Star size={15} className={isFavorite ? 'fill-yellow-500 text-yellow-500' : 'text-muted-foreground'} />
         </button>
       </div>

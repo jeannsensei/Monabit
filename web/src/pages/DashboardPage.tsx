@@ -43,11 +43,7 @@ export function DashboardPage() {
           <CoinDetailBar
             coinId={selectedCoin}
             isFavorite={favoriteIds.has(selectedCoin)}
-            onToggleFavorite={() => toggleFavorite({
-              coin_id: selectedCoin,
-              coin_symbol: cryptoData?.data.find((c) => c.id === selectedCoin)?.symbol ?? '',
-              coin_name: cryptoData?.data.find((c) => c.id === selectedCoin)?.name ?? '',
-            })}
+            onToggleFavorite={toggleFavorite}
           />
           <PriceChart coinId={selectedCoin} onClose={() => setSelectedCoin(null)} />
         </>
